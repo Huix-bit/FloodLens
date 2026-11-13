@@ -1,0 +1,61 @@
+# FloodLens pipeline configuration.
+# A new area of interest = a new copy of this file (pass it with --config).
+# Nothing below is hard-coded in the scripts or in the web app.
+
+title: "Kelantan floods, Nov-Dec 2025"
+
+aoi:
+  # Centre of the area of interest (WGS84). Near Kuala Krai, Sungai Kelantan.
+  center_lon: 102.20
+  center_lat: 5.53
+  # Output grid. width * pixel_m = extent in metres (1024 * 20 m = 20.48 km).
+  width: 1024
+  height: 1024
+  pixel_m: 20
+  # UTM zone is derived from center_lon unless set here (EPSG:326xx north / 327xx south).
+  epsg: 32648
+
+# One entry per NISAR pass on ONE track/direction (12-day repeat).
+# The web app reads the number of dates from manifest.json - add or remove freely.
+dates:
+  - { date: "2025-11-14", label: "Before" }
+  - { date: "2025-11-26", label: "Peak flood" }
+  - { date: "2025-12-08", label: "Receding" }
+  - { date: "2025-12-20", label: "Recovery" }
+
+nisar:
+  search_start: "2025-11-01"
+  search_end: "2025-12-20"
+  product: "GCOV"
+  track: null          # filled in after 01_search_nisar.py picks one track
+  direction: null      # ASCENDING | DESCENDING
+
+# Display stretch used when writing the 8-bit backscatter PNGs (documented in README).
+stretch_db:
+  cband: [-25.0, 0.0]
+  lband: [-25.0, 0.0]
+
+# Change-detection STARTING POINTS only. 03_flood_detect.py refines them from the
+# image histograms (Otsu) and logs the values actually used.
+thresholds:
+  open_water_hh_db: -18.0        # post-event HH below this ...
+  open_water_drop_db: 3.0        # ... and at least this much lower than pre-event
+  flooded_veg_rise_db: 3.0       # HH increase over tree / palm land cover
+  permanent_water_occurrence: 80 # JRC GSW occurrence (%) treated as permanent water
+  max_hand_m: 15.0               # ignore detections higher than this above nearest drainage
+
+exposure:
+  hex_flat_to_flat_m: 1000
+  # score = 100 * sum(weight_i * metric_i / max(metric_i)); flood_frac is already 0-1
+  weights: { people: 0.40, flood_frac: 0.25, roads_km: 0.20, facilities: 0.15 }
+
+paths:
+  work_dir: "pipeline/work"      # raw + intermediate files (git-ignored)
+  web_data: "web/data"
+
+# Used only by 00_mock_data.py
+mock:
+  seed: 20251126
+  flood_stage_m: [0.05, 3.9, 2.5, 0.9]     # water stage above the river, one per date
+  cloud_fraction: [0.06, 0.88, 0.45, 0.18] # optical cloud cover target, one per date
+  rain_mm_prev7d: [42.0, 486.0, 131.0, 58.0]

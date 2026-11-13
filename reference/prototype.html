@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FloodLens · Radar Vision FPV Prototype</title>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--acc:#ffd166;--line:rgba(140,220,255,.28);--panel:rgba(5,12,18,.66)}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden;background:#000;color:#e8f6ff;font-family:'Chakra Petch',system-ui,sans-serif}
+#c{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+#c:active{cursor:grabbing}
+.mono{font-family:'JetBrains Mono',monospace}
+.panel{position:fixed;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:10px 12px;backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px)}
+.panel::before,.panel::after{content:"";position:absolute;width:10px;height:10px;border:2px solid var(--acc);transition:border-color .3s}
+.panel::before{top:-2px;left:-2px;border-right:0;border-bottom:0}
+.panel::after{bottom:-2px;right:-2px;border-left:0;border-top:0}
+#brand{top:14px;left:14px;pointer-events:none}
+#brand b{font-size:15px;letter-spacing:.14em}
+#brand .sim{display:inline-block;margin-top:6px;font-size:10.5px;letter-spacing:.08em;color:#ffb4a8;border:1px solid rgba(255,140,120,.5);padding:2px 6px;border-radius:3px}
+#modeBox{top:14px;left:50%;transform:translateX(-50%);text-align:center;min-width:330px;pointer-events:none}
+#modeName{font-size:24px;font-weight:700;letter-spacing:.12em;color:var(--acc);text-shadow:0 0 18px color-mix(in srgb,var(--acc) 55%,transparent);transition:color .3s}
+#modeSub{font-size:12.5px;opacity:.85;margin-top:3px}
+#pips{margin-top:7px;font-size:12px;letter-spacing:.3em;opacity:.9}
+#pips span{opacity:.3}#pips span.on{opacity:1;color:var(--acc)}
+#miniWrap{top:14px;right:14px;padding:8px}
+#mini{display:block;width:170px;height:170px;border-radius:3px;image-rendering:pixelated}
+#miniInfo{font-size:10.5px;margin-top:5px;display:flex;justify-content:space-between;opacity:.85}
+#stats{left:14px;bottom:14px;width:300px;pointer-events:none}
+#stats h4{margin:0 0 8px;font-size:11px;letter-spacing:.16em;opacity:.75;font-weight:600}
+.row{display:grid;grid-template-columns:92px 1fr 66px;gap:8px;align-items:center;font-size:12px;margin:5px 0;opacity:.55;transition:opacity .25s}
+.row.on{opacity:1}
+.bar{height:8px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden}
+.bar i{display:block;height:100%;width:0;transition:width .6s}
+.row .v{text-align:right;white-space:nowrap}
+.note{font-size:11.5px;margin-top:8px;line-height:1.45;opacity:.9}
+.note b{color:#00ffd0}
+#timeline{bottom:14px;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center;padding:8px}
+#timeline .lbl{font-size:10px;letter-spacing:.14em;opacity:.65;margin:0 6px;writing-mode:horizontal-tb}
+.chip{pointer-events:auto;cursor:pointer;background:rgba(255,255,255,.05);border:1px solid var(--line);color:#dceefa;border-radius:4px;padding:6px 10px;font:600 12px 'Chakra Petch',sans-serif;text-align:left;min-width:108px}
+.chip small{display:block;font:400 10.5px 'JetBrains Mono',monospace;opacity:.7}
+.chip.on{border-color:var(--acc);background:color-mix(in srgb,var(--acc) 18%,transparent);color:#fff}
+#legend{right:14px;bottom:150px;font-size:11.5px;pointer-events:none;display:none;width:236px}
+#legend div{display:flex;align-items:center;gap:8px;margin:4px 0}
+#legend i{width:13px;height:13px;border-radius:2px;flex:none;border:1px solid rgba(255,255,255,.25)}
+#help{right:14px;bottom:14px;font-size:11px;line-height:1.6;width:236px;pointer-events:none}
+#help kbd{font:600 10px 'JetBrains Mono',monospace;border:1px solid rgba(255,255,255,.35);border-bottom-width:2px;border-radius:3px;padding:0 4px;margin-right:2px}
+#pad{position:fixed;right:264px;bottom:14px;display:flex;gap:6px}
+#pad button{pointer-events:auto;width:52px;height:46px;border-radius:6px;background:var(--panel);border:1px solid var(--line);color:#e8f6ff;font:700 13px 'Chakra Petch',sans-serif;cursor:pointer;touch-action:none}
+#pad button:active{border-color:var(--acc);color:var(--acc)}
+#xhair{position:fixed;left:50%;top:50%;width:46px;height:46px;transform:translate(-50%,-50%);pointer-events:none;opacity:.75}
+#readout{position:fixed;left:50%;top:calc(50% + 34px);transform:translateX(-50%);font-size:10.5px;letter-spacing:.08em;opacity:.7;pointer-events:none;white-space:nowrap}
+#scan{position:fixed;inset:0;pointer-events:none;opacity:0;transition:opacity .35s;
+  background:repeating-linear-gradient(0deg,rgba(0,0,0,.2) 0 1px,transparent 1px 3px),radial-gradient(ellipse at center,transparent 50%,rgba(0,0,0,.6) 100%)}
+#scan.on{opacity:1}
+#scan .sweep{position:absolute;left:0;right:0;height:140px;top:-140px;background:linear-gradient(180deg,transparent,color-mix(in srgb,var(--acc) 12%,transparent),transparent);animation:sweep 3.4s linear infinite}
+@keyframes sweep{to{top:100%}}
+#wipe{position:fixed;inset:0;pointer-events:none;opacity:0;mix-blend-mode:screen;
+  background:linear-gradient(90deg,transparent 30%,color-mix(in srgb,var(--acc) 50%,transparent) 47%,#fff 50%,color-mix(in srgb,var(--acc) 50%,transparent) 53%,transparent 70%);background-size:300% 100%}
+#wipe.r{animation:wipeR .55s ease-out}
+#wipe.l{animation:wipeL .55s ease-out}
+@keyframes wipeR{0%{opacity:1;background-position:0% 0}100%{opacity:.2;background-position:100% 0}}
+@keyframes wipeL{0%{opacity:1;background-position:100% 0}100%{opacity:.2;background-position:0% 0}}
+#flash{position:fixed;inset:0;pointer-events:none;background:var(--acc);opacity:0}
+#flash.go{animation:flash .5s ease-out}
+@keyframes flash{0%{opacity:.28}100%{opacity:0}}
+#toast{position:fixed;top:118px;left:50%;transform:translateX(-50%);font-size:13px;padding:7px 14px;border-radius:4px;background:rgba(0,0,0,.6);border:1px solid var(--acc);opacity:0;transition:opacity .4s;pointer-events:none;white-space:nowrap}
+#toast.on{opacity:1}
+#start{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at center,rgba(3,10,16,.72),rgba(0,0,0,.92));z-index:10}
+#start .card{max-width:560px;margin:16px;padding:26px 28px;background:rgba(6,16,24,.9);border:1px solid var(--line);border-radius:8px;position:relative}
+#start h1{margin:0;font-size:26px;letter-spacing:.14em}
+#start h1 span{color:#00ffd0}
+#start p{font-size:14px;line-height:1.6;opacity:.9;margin:10px 0}
+#start ul{font-size:13px;line-height:1.75;padding-left:18px;margin:10px 0 16px}
+#start .warn{font-size:12px;color:#ffb4a8;border-left:2px solid #ff8c78;padding-left:10px}
+#go{font:700 15px 'Chakra Petch',sans-serif;letter-spacing:.16em;padding:12px 26px;border-radius:5px;border:1px solid #00ffd0;background:rgba(0,255,208,.12);color:#00ffd0;cursor:pointer}
+#go:hover{background:rgba(0,255,208,.24)}
+@media (max-width:900px){
+  #help,#legend{display:none!important}
+  #pad{right:14px;bottom:86px}
+  #stats{width:220px;bottom:auto;top:96px;padding:8px 10px}
+  .row{grid-template-columns:70px 1fr 44px;font-size:11px}
+  #mini{width:110px;height:110px}
+  #modeBox{min-width:0;width:calc(100% - 290px);top:14px}
+  #modeName{font-size:16px}#modeSub{font-size:11px}
+  .chip{min-width:84px;padding:5px 7px;font-size:11px}
+}
+@media (max-width:600px){
+  #brand{display:none}#modeBox{left:14px;transform:none;width:calc(100% - 160px);text-align:left}
+}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="scan"><div class="sweep"></div></div>
+
+<div id="brand" class="panel">
+  <b>FLOODLENS</b><span class="mono" style="font-size:11px;opacity:.7"> // FPV RADAR VISION</span><br>
+  <span class="sim mono">SIMULATED TERRAIN &amp; FLOOD · PROTOTYPE</span>
+</div>
+
+<div id="modeBox" class="panel">
+  <div id="modeName">OPTICAL EYE</div>
+  <div id="modeSub"></div>
+  <div id="pips" class="mono"></div>
+</div>
+
+<div id="miniWrap" class="panel">
+  <canvas id="mini" width="340" height="340"></canvas>
+  <div id="miniInfo" class="mono"><span id="hdg">HDG 000°</span><span id="alt">ALT 000 m</span></div>
+</div>
+
+<div id="stats" class="panel">
+  <h4>FLOOD DETECTED BY SENSOR</h4>
+  <div id="rows"></div>
+  <div class="note" id="note"></div>
+</div>
+
+<div id="legend" class="panel"></div>
+
+<div id="timeline" class="panel">
+  <span class="lbl mono">12-DAY<br>REVISIT</span>
+  <div id="chips" style="display:flex;gap:6px"></div>
+</div>
+
+<div id="pad">
+  <button id="bQ" title="Swing left">◀ Q</button>
+  <button id="bF" title="Hold to fly forward">▲</button>
+  <button id="bE" title="Swing right">E ▶</button>
+</div>
+
+<div id="help" class="panel">
+  <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> fly · <kbd>R</kbd>/<kbd>F</kbd> up/down · <kbd>Shift</kbd> boost<br>
+  Drag to look · <b>flick left/right</b> to swing<br>
+  <kbd>Q</kbd><kbd>E</kbd> swing vision · <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> or wheel: date<br>
+  <kbd>T</kbd> detection overlay on/off
+</div>
+
+<svg id="xhair" viewBox="0 0 46 46" fill="none" stroke="currentColor" stroke-width="1.5">
+  <path d="M23 4v9M23 33v9M4 23h9M33 23h9"/><circle cx="23" cy="23" r="2.2"/>
+</svg>
+<div id="readout" class="mono"></div>
+<div id="wipe"></div><div id="flash"></div>
+<div id="toast"></div>
+
+<div id="start">
+  <div class="card panel" style="position:relative">
+    <h1>FLOOD<span>LENS</span> · FPV</h1>
+    <p>You're a drone over a Malaysian river valley during the monsoon. It's raining and cloudy, and the oil-palm estate looks fine from above. <b>Swing your head</b> to change what your eyes can see.</p>
+    <ul>
+      <li><b>Swing right (E / flick right)</b> → change vision: Optical → C-band radar → <span style="color:#00ffd0">L-band NISAR</span></li>
+      <li><b>Swing left (Q / flick left)</b> → go back</li>
+      <li><b>1 · 2 · 3</b> or mouse wheel → jump between satellite passes (before / peak / receding)</li>
+      <li><b>WASD + drag</b> → fly around</li>
+    </ul>
+    <p class="warn">Prototype for look-and-feel only. Terrain, flood and numbers are simulated, not real NISAR measurements.</p>
+    <p style="font-size:13px;opacity:.8">原型只用来确认交互感觉：右甩切换"人眼 → C 波段 → L 波段 NISAR"，看油棕园树下隐藏的洪水。</p>
+    <button id="go">START MISSION</button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(() => {
+const $ = id => document.getElementById(id);
+
+/* ---------- world definition (simulated) ---------- */
+const WSZ = 2000, SEG = 200, N = SEG + 1;
+const CELL_KM2 = 0.0016;                  // 1 unit = 4 m, vertex spacing 40 m
+const RIVER = 0, TOWN = 1, PLANT = 2, FARM = 3, FOREST = 4;
+const LEVELS = [0.4, 7.6, 4.6];           // water level per pass
+const CLOUD  = [0.05, 0.88, 0.45];        // optical cloud cover per pass
+const DATES  = [
+  {d:'2025-11-14', t:'Before'},
+  {d:'2025-11-26', t:'Peak flood'},
+  {d:'2025-12-08', t:'Receding'}
+];
+const MODES = [
+  {name:'OPTICAL EYE', sub:'What a normal camera satellite sees · 普通光学卫星', acc:'#ffd166'},
+  {name:'C-BAND RADAR', sub:'Sentinel-1-style · sees through cloud, not under trees · 看不到树下', acc:'#8ecbff'},
+  {name:'L-BAND · NISAR', sub:'24 cm waves pass the canopy · flooded palms light up · 穿透树冠', acc:'#00ffd0'}
+];
+
+const rx = z => 180*Math.sin(z/320) + 60*Math.sin(z/110 + 1.3);
+const ss = (a,b,x) => { const t = Math.min(1, Math.max(0, (x-a)/(b-a))); return t*t*(3-2*t); };
+const TZ = -380, TX = rx(-380) + 260;
+
+function baseH(x, z){
+  const d = Math.abs(x - rx(z));
+  if (d < 22) return -3;
+  const fp = 1 + d*0.012 + 1.2*Math.sin(x/45)*Math.sin(z/60);
+  const hills = 18*Math.sin(x/140)*Math.cos(z/170) + 10*Math.sin((x+z)/90) + 6*Math.sin(x/37 + z/53);
+  const hill = 25 + 70*ss(300, 800, d) + hills;
+  let h = fp + (hill - fp)*ss(260, 520, d);
+  const td = Math.hypot(x - TX, z - TZ);
+  if (td < 170) h += 2.2*(1 - td/170);
+  return h;
+}
+function classify(x, z){
+  const s = x - rx(z), d = Math.abs(s);
+  if (d < 22) return RIVER;
+  if (Math.hypot(x - TX, z - TZ) < 150) return TOWN;
+  if (s < 0 && d < 430 && z > -820 && z < 760) return PLANT;
+  if (s > 0 && z > 220 && z < 900 && d < 380) return PLANT;
+  if (d < 480) return FARM;
+  return FOREST;
+}
+
+/* ---------- renderer / scene ---------- */
+const renderer = new THREE.WebGLRenderer({canvas:$('c'), antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(70, innerWidth/innerHeight, 0.5, 6000);
+camera.rotation.order = 'YXZ';
+scene.add(new THREE.HemisphereLight(0xe6f2ff, 0x3a4a2a, 0.82));
+const sun = new THREE.DirectionalLight(0xffffff, 0.7); sun.position.set(-600, 900, 300); scene.add(sun);
+scene.fog = new THREE.Fog(0x9cc6e8, 500, 3200);
+const bg = new THREE.Color(), skyClear = new THREE.Color(0x9cc6e8), skyCloud = new THREE.Color(0x7b838a), radarBg = new THREE.Color(0x03080b);
+
+/* ---------- terrain ---------- */
+const geo = new THREE.PlaneGeometry(WSZ, WSZ, SEG, SEG);
+geo.rotateX(-Math.PI/2);
+const pos = geo.attributes.position, NV = pos.count;
+const H0 = new Float32Array(NV), CLS = new Uint8Array(NV), SPK = new Float32Array(NV), PX = new Float32Array(NV), PZ = new Float32Array(NV);
+for (let i = 0; i < NV; i++){
+  const x = pos.getX(i), z = pos.getZ(i);
+  PX[i] = x; PZ[i] = z;
+  H0[i] = baseH(x, z); CLS[i] = classify(x, z); SPK[i] = Math.random();
+  pos.setY(i, H0[i]);
+}
+const col = new Float32Array(NV*3);
+geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+const terrain = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({vertexColors:true}));
+scene.add(terrain);
+
+/* ---------- instanced objects ---------- */
+const dummy = new THREE.Object3D();
+function inst(geom, mat, list, place){
+  const m = new THREE.InstancedMesh(geom, mat, list.length);
+  list.forEach((it, k) => { place(it, dummy); dummy.updateMatrix(); m.setMatrixAt(k, dummy.matrix); });
+  m.instanceMatrix.needsUpdate = true; scene.add(m); return m;
+}
+const M = {
+  crown: new THREE.MeshLambertMaterial({color:0x2f6b2a, transparent:true, flatShading:true}),
+  trunk: new THREE.MeshLambertMaterial({color:0x6b5135}),
+  forest: new THREE.MeshLambertMaterial({color:0x24522a, transparent:true, flatShading:true}),
+  bldg: new THREE.MeshLambertMaterial({color:0xb9b3a8})
+};
+const palms = [];
+for (let r = 0; r < N; r += 2) for (let c = (r/2)%2; c < N; c += 2){
+  const i = r*N + c;
+  if (CLS[i] === PLANT) palms.push({x:PX[i] + (Math.random()-.5)*6, z:PZ[i] + (Math.random()-.5)*6, h:H0[i], s:.85 + Math.random()*.3, r:Math.random()*6.28});
+}
+const placePalm = (p, o) => { o.position.set(p.x, p.h, p.z); o.rotation.set(0, p.r, 0); o.scale.setScalar(p.s); };
+const trunkG = new THREE.CylinderGeometry(.7, .9, 10, 5); trunkG.translate(0, 5, 0);
+const crownG = new THREE.IcosahedronGeometry(5.5, 0); crownG.scale(1, .45, 1); crownG.translate(0, 10.5, 0);
+inst(trunkG, M.trunk, palms, placePalm);
+inst(crownG, M.crown, palms, placePalm);
+
+const trees = [];
+for (let k = 0; k < 6000 && trees.length < 2600; k++){
+  const i = (Math.random()*NV) | 0;
+  if (CLS[i] === FOREST) trees.push({x:PX[i] + (Math.random()-.5)*10, z:PZ[i] + (Math.random()-.5)*10, h:H0[i], s:6 + Math.random()*5});
+}
+const treeG = new THREE.IcosahedronGeometry(1, 0); treeG.translate(0, .8, 0);
+inst(treeG, M.forest, trees, (t, o) => { o.position.set(t.x, t.h - 1, t.z); o.rotation.set(0, 0, 0); o.scale.setScalar(t.s); });
+
+const blds = [];
+for (let k = 0; k < 3000 && blds.length < 320; k++){
+  const a = Math.random()*6.283, rr = Math.sqrt(Math.random())*140;
+  const x = TX + Math.cos(a)*rr, z = TZ + Math.sin(a)*rr;
+  if (classify(x, z) === TOWN) blds.push({x, z, h:baseH(x, z), w:6 + Math.random()*9, d:6 + Math.random()*9, y:5 + Math.random()*(rr < 60 ? 22 : 10), r:Math.random()*.4});
+}
+const boxG = new THREE.BoxGeometry(1, 1, 1); boxG.translate(0, .5, 0);
+inst(boxG, M.bldg, blds, (b, o) => { o.position.set(b.x, b.h, b.z); o.rotation.set(0, b.r, 0); o.scale.set(b.w, b.y, b.d); });
+
+const MODE_MAT = [
+  {crown:[0x2f6b2a, 1, false], trunk:0x6b5135, forest:[0x24522a, 1], bldg:0xb9b3a8},
+  {crown:[0x6c7277, 1, false], trunk:0x50565a, forest:[0x767b80, 1], bldg:0xdadada},
+  {crown:[0x2affd5, .2, true],  trunk:0xf4ffff, forest:[0x9aa3a8, .3], bldg:0xffffff}
+];
+
+/* ---------- rain ---------- */
+const RN = 2200, rOff = new Float32Array(RN*3), rPos = new Float32Array(RN*6);
+for (let k = 0; k < RN; k++){ rOff[k*3] = (Math.random()-.5)*320; rOff[k*3+1] = Math.random()*180 - 40; rOff[k*3+2] = (Math.random()-.5)*320; }
+const rGeo = new THREE.BufferGeometry(); rGeo.setAttribute('position', new THREE.BufferAttribute(rPos, 3));
+const rainMat = new THREE.LineBasicMaterial({color:0xd6e8f4, transparent:true, opacity:.5});
+const rain = new THREE.LineSegments(rGeo, rainMat); rain.frustumCulled = false; scene.add(rain);
+
+/* ---------- state ---------- */
+let mode = 0, dateIdx = 1, level = LEVELS[1], targetLevel = LEVELS[1], cloudCur = CLOUD[1], detect = true;
+const P = new THREE.Vector3(TX - 40, 75, TZ + 140);
+const look = {x: rx(-120) - 230, z: -120};
+let yaw = Math.atan2(-(look.x - P.x), -(look.z - P.z)), pitch = -0.3;
+let pendingSwing = 0, swingS = null, started = false, bobPhase = 0, tAll = 0;
+
+/* ---------- terrain colouring per mode ---------- */
+function refreshTerrain(moved){
+  const L = mode === 2;
+  for (let i = 0; i < NV; i++){
+    const h = H0[i], c = CLS[i], river = c === RIVER;
+    const flooded = river || h < level, nf = flooded && !river;
+    if (moved) pos.setY(i, flooded ? level : h);
+    const sp = SPK[i];
+    let r, g, b;
+    if (mode === 0){
+      if (river){ r=.27; g=.35; b=.36; }
+      else if (nf && c !== PLANT){ r=.46; g=.39; b=.27; }
+      else if (c === PLANT){ r=.16; g=.31; b=.12; }
+      else if (c === FARM){ const st = (Math.floor(PX[i]/40) + Math.floor(PZ[i]/90)) & 1; r = st?.6:.5; g = st?.6:.62; b = st?.32:.27; }
+      else if (c === TOWN){ r=.56; g=.54; b=.5; }
+      else { const k = Math.min(1, Math.max(0, h/120)); r=.10+.22*k; g=.26+.10*k; b=.10+.12*k; }
+      const m = .9 + .2*sp; r*=m; g*=m; b*=m;
+    } else {
+      let v;
+      if (river || (nf && c !== PLANT)) v = .05;
+      else if (c === PLANT) v = L ? (nf ? .95 : .34) : .40;
+      else if (c === FARM) v = L ? .18 : .26;
+      else if (c === TOWN) v = L ? .9 : .78;
+      else v = L ? .52 : .46;
+      v = Math.min(1, v*(.72 + .56*sp));
+      r = g = b = v;
+      if (detect){
+        if (nf && c !== PLANT){ r = r*.3 + .084; g = g*.3 + .294; b = b*.3 + .7; }
+        else if (L && nf && c === PLANT){ r = r*.2; g = g*.2 + .8; b = b*.2 + .656; }
+      }
+    }
+    col[i*3] = r; col[i*3+1] = g; col[i*3+2] = b;
+  }
+  geo.attributes.color.needsUpdate = true;
+  if (moved){ pos.needsUpdate = true; geo.computeVertexNormals(); }
+  paintMini();
+}
+
+/* ---------- minimap ---------- */
+const off = document.createElement('canvas'); off.width = off.height = N;
+const offCtx = off.getContext('2d'), img = offCtx.createImageData(N, N);
+const mini = $('mini'), mctx = mini.getContext('2d');
+function paintMini(){
+  const d = img.data;
+  for (let i = 0; i < NV; i++){ d[i*4] = col[i*3]*255; d[i*4+1] = col[i*3+1]*255; d[i*4+2] = col[i*3+2]*255; d[i*4+3] = 255; }
+  offCtx.putImageData(img, 0, 0);
+}
+function drawMini(){
+  const s = mini.width;
+  mctx.imageSmoothingEnabled = false;
+  mctx.drawImage(off, 0, 0, s, s);
+  const px = (P.x + 1000)/2000*s, py = (P.z + 1000)/2000*s;
+  const fx = -Math.sin(yaw), fz = -Math.cos(yaw), a = Math.atan2(fz, fx);
+  mctx.save(); mctx.translate(px, py); mctx.rotate(a);
+  mctx.fillStyle = 'rgba(255,255,255,.16)';
+  mctx.beginPath(); mctx.moveTo(0,0); mctx.arc(0, 0, s*.22, -.62, .62); mctx.closePath(); mctx.fill();
+  mctx.fillStyle = MODES[mode].acc; mctx.strokeStyle = '#000'; mctx.lineWidth = 2;
+  mctx.beginPath(); mctx.moveTo(16, 0); mctx.lineTo(-9, -9); mctx.lineTo(-4, 0); mctx.lineTo(-9, 9); mctx.closePath(); mctx.stroke(); mctx.fill();
+  mctx.restore();
+  mctx.font = '600 18px JetBrains Mono, monospace'; mctx.fillStyle = '#fff'; mctx.strokeStyle = 'rgba(0,0,0,.7)'; mctx.lineWidth = 4;
+  const tx = (TX + 1000)/2000*s, tz = (TZ + 1000)/2000*s;
+  mctx.strokeText('TOWN', tx - 22, tz + 6); mctx.fillText('TOWN', tx - 22, tz + 6);
+  mctx.strokeText('N', s/2 - 6, 20); mctx.fillText('N', s/2 - 6, 20);
+}
+
+/* ---------- stats ---------- */
+const STATS = LEVELS.map(lv => {
+  let open = 0, veg = 0, town = 0;
+  for (let i = 0; i < NV; i++){
+    const c = CLS[i]; if (c === RIVER || H0[i] >= lv) continue;
+    if (c === PLANT) veg++; else { open++; if (c === TOWN) town++; }
+  }
+  return {open: open*CELL_KM2, veg: veg*CELL_KM2, res: Math.round(town*55/10)*10};
+});
+function renderStats(){
+  const s = STATS[dateIdx], cl = CLOUD[dateIdx];
+  const vals = [s.open*(1 - cl), s.open, s.open + s.veg*.95];
+  const mx = Math.max(...vals, .01);
+  const names = ['OPTICAL', 'C-BAND', 'L-BAND·NISAR'], cols = ['#ffd166', '#8ecbff', '#00ffd0'];
+  $('rows').innerHTML = vals.map((v, k) => `<div class="row ${k === mode ? 'on' : ''}"><span class="mono">${names[k]}</span><span class="bar"><i style="width:${v/mx*100}%;background:${cols[k]}"></i></span><span class="v mono">${v.toFixed(1)} km²</span></div>`).join('');
+  const hid = s.veg*.95;
+  $('note').innerHTML = dateIdx === 0
+    ? 'Pre-flood pass: only the permanent river. Press <b>2</b> to jump to the peak pass.'
+    : `Hidden under oil-palm canopy: <b>+${hid.toFixed(1)} km²</b> only L-band sees.<br>Optical cloud cover this pass: ${(cl*100)|0}%.<br>Residents in flood zone*: ~${s.res.toLocaleString()}<br><span style="opacity:.6">*simulated numbers for prototype</span>`;
+}
+function renderChips(){
+  $('chips').innerHTML = DATES.map((d, k) => `<button class="chip ${k === dateIdx ? 'on' : ''}" data-k="${k}">${k+1} · ${d.t}<small>${d.d}</small></button>`).join('');
+}
+$('chips').addEventListener('click', e => { const b = e.target.closest('.chip'); if (b) setDate(+b.dataset.k); });
+
+function renderLegend(){
+  const lg = $('legend');
+  if (mode === 0){ lg.style.display = 'none'; return; }
+  lg.style.display = 'block';
+  const items = [
+    ['#000', 'Permanent river / dark = smooth water'],
+    ['#2b70ff', 'Detected open-water flood'],
+    ...(mode === 2 ? [['#00ffd0', 'Flooded UNDER canopy (double bounce)']] : [['#666b70', 'Palm canopy: radar cannot see below']]),
+    ['#fff', 'Buildings & trunks: bright double bounce']
+  ];
+  lg.innerHTML = '<div class="mono" style="font-size:10.5px;letter-spacing:.12em;opacity:.7;margin-bottom:4px">LEGEND · OVERLAY ' + (detect ? 'ON' : 'OFF') + ' [T]</div>' +
+    items.map(([c, t]) => `<div><i style="background:${c}"></i>${t}</div>`).join('');
+}
+
+/* ---------- mode / date ---------- */
+function setMode(m){
+  mode = m;
+  const md = MODES[m], mm = MODE_MAT[m];
+  document.documentElement.style.setProperty('--acc', md.acc);
+  $('modeName').textContent = md.name; $('modeSub').textContent = md.sub;
+  $('pips').innerHTML = '◀ ' + MODES.map((_, k) => `<span class="${k === m ? 'on' : ''}">●</span>`).join(' ') + ' ▶';
+  M.crown.color.setHex(mm.crown[0]); M.crown.opacity = mm.crown[1]; M.crown.wireframe = mm.crown[2]; M.crown.depthWrite = mm.crown[1] >= 1;
+  M.trunk.color.setHex(mm.trunk); M.trunk.emissive.setHex(m === 2 ? 0x9aa8a8 : 0x000000); M.bldg.emissive.setHex(m === 2 ? 0x555555 : 0x000000);
+  M.forest.color.setHex(mm.forest[0]); M.forest.opacity = mm.forest[1]; M.forest.depthWrite = mm.forest[1] >= 1;
+  M.bldg.color.setHex(mm.bldg);
+  $('scan').classList.toggle('on', m > 0);
+  refreshTerrain(false); renderStats(); renderLegend();
+}
+function setDate(k){
+  if (k === dateIdx) return;
+  dateIdx = k; targetLevel = LEVELS[k];
+  renderChips(); renderStats();
+  toast(`Satellite pass ${DATES[k].d} · ${DATES[k].t}`);
+}
+
+/* ---------- swing ---------- */
+function swing(dir){
+  if (!started) return;
+  if (swingS){ pendingSwing = dir; return; }
+  swingS = {t:0, dir, done:false};
+  const w = $('wipe'); w.className = ''; void w.offsetWidth; w.className = dir > 0 ? 'r' : 'l';
+}
+let toastT;
+function toast(msg){ const t = $('toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), 2200); }
+
+/* ---------- input ---------- */
+const keys = {};
+addEventListener('keydown', e => {
+  if (!started) return;
+  keys[e.code] = true;
+  if (['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)) e.preventDefault();
+  if (e.repeat) return;
+  if (e.code === 'KeyE') swing(1);
+  if (e.code === 'KeyQ') swing(-1);
+  if (e.code === 'Digit1') setDate(0);
+  if (e.code === 'Digit2') setDate(1);
+  if (e.code === 'Digit3') setDate(2);
+  if (e.code === 'KeyT'){ detect = !detect; refreshTerrain(false); renderLegend(); toast('Detection overlay ' + (detect ? 'ON' : 'OFF')); }
+});
+addEventListener('keyup', e => { keys[e.code] = false; });
+addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
+
+const cv = $('c');
+let drag = null;
+cv.addEventListener('pointerdown', e => {
+  if (!started) return;
+  cv.setPointerCapture(e.pointerId);
+  drag = {x:e.clientX, y:e.clientY, samples:[{t:performance.now(), x:e.clientX, yaw}]};
+});
+cv.addEventListener('pointermove', e => {
+  if (!drag) return;
+  const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+  drag.x = e.clientX; drag.y = e.clientY;
+  yaw -= dx*.0035; pitch = Math.max(-1.45, Math.min(.6, pitch - dy*.0035));
+  const now = performance.now();
+  drag.samples.push({t:now, x:e.clientX, yaw});
+  while (drag.samples.length > 2 && now - drag.samples[0].t > 110) drag.samples.shift();
+});
+function endDrag(){
+  if (!drag) return;
+  const s = drag.samples, a = s[0], b = s[s.length - 1], dt = b.t - a.t;
+  if (dt > 0 && performance.now() - b.t < 60){
+    const vx = (b.x - a.x)/dt;
+    if (Math.abs(vx) > 1.4 && Math.abs(b.x - a.x) > 50){ yaw = a.yaw; swing(vx > 0 ? 1 : -1); }
+  }
+  drag = null;
+}
+cv.addEventListener('pointerup', endDrag); cv.addEventListener('pointercancel', endDrag);
+let wheelLock = 0;
+cv.addEventListener('wheel', e => {
+  e.preventDefault(); if (!started) return;
+  const now = performance.now(); if (now < wheelLock || Math.abs(e.deltaY) < 4) return;
+  wheelLock = now + 650;
+  setDate(Math.max(0, Math.min(2, dateIdx + (e.deltaY > 0 ? 1 : -1))));
+}, {passive:false});
+let holdF = false;
+$('bF').addEventListener('pointerdown', e => { e.preventDefault(); holdF = true; });
+['pointerup','pointerleave','pointercancel'].forEach(ev => $('bF').addEventListener(ev, () => holdF = false));
+$('bQ').addEventListener('click', () => swing(-1));
+$('bE').addEventListener('click', () => swing(1));
+$('go').addEventListener('click', () => { $('start').style.display = 'none'; started = true; toast('Swing right (E / flick) → see through the rain'); });
+
+addEventListener('resize', () => { renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix(); });
+
+/* ---------- loop ---------- */
+const fwd = new THREE.Vector3(), right = new THREE.Vector3();
+let last = performance.now(), hudT = 0;
+function frame(now){
+  const dt = Math.min(.05, (now - last)/1000); last = now; tAll += dt;
+
+  // movement
+  let mz = 0, mx = 0, my = 0;
+  if (started){
+    if (keys.KeyW || holdF) mz += 1; if (keys.KeyS) mz -= 1;
+    if (keys.KeyD) mx += 1; if (keys.KeyA) mx -= 1;
+    if (keys.KeyR || keys.Space) my += 1; if (keys.KeyF || keys.KeyC) my -= 1;
+    if (keys.ArrowUp) mz += 1; if (keys.ArrowDown) mz -= 1;
+    if (keys.ArrowLeft) yaw += 1.6*dt; if (keys.ArrowRight) yaw -= 1.6*dt;
+  } else { yaw += dt*.04; }
+  const sp = (keys.ShiftLeft || keys.ShiftRight) ? 280 : 110;
+  fwd.set(-Math.sin(yaw), 0, -Math.cos(yaw)); right.set(Math.cos(yaw), 0, -Math.sin(yaw));
+  P.addScaledVector(fwd, mz*sp*dt).addScaledVector(right, mx*sp*dt); P.y += my*sp*.7*dt;
+  P.x = Math.max(-1100, Math.min(1100, P.x)); P.z = Math.max(-1100, Math.min(1100, P.z));
+  const ground = Math.max(baseH(P.x, P.z), level) + 6;
+  if (P.y < ground) P.y = ground; if (P.y > 650) P.y = 650;
+
+  // water level & clouds
+  if (Math.abs(level - targetLevel) > .004){
+    level += (targetLevel - level)*Math.min(1, dt*2.4);
+    if (Math.abs(level - targetLevel) < .004) level = targetLevel;
+    refreshTerrain(true);
+  }
+  cloudCur += (CLOUD[dateIdx] - cloudCur)*Math.min(1, dt*1.8);
+
+  // swing
+  let roll = 0, yawOff = 0;
+  if (swingS){
+    swingS.t += dt/.55; const p = Math.min(1, swingS.t), k = Math.sin(Math.PI*p);
+    roll = -swingS.dir*k*.3; yawOff = -swingS.dir*k*.38;
+    if (p >= .5 && !swingS.done){
+      swingS.done = true; setMode((mode + swingS.dir + 3) % 3);
+      const f = $('flash'); f.className = ''; void f.offsetWidth; f.className = 'go';
+    }
+    if (p >= 1){ swingS = null; if (pendingSwing){ const d = pendingSwing; pendingSwing = 0; swing(d); } }
+  }
+  // head bob
+  const moving = mz || mx;
+  bobPhase += dt*(moving ? (sp > 150 ? 11 : 8) : 1.3);
+  const bobA = moving ? .9 : .35;
+  camera.position.set(P.x, P.y + Math.sin(bobPhase)*bobA, P.z);
+  camera.rotation.set(pitch + Math.sin(bobPhase*2)*.004*(moving?1:0), yaw + yawOff, roll + Math.sin(bobPhase*.5)*(moving ? .012 : .004));
+
+  // atmosphere
+  if (mode === 0){
+    const c = cloudCur; bg.copy(skyClear).lerp(skyCloud, c);
+    scene.background = bg; scene.fog.color.copy(bg);
+    scene.fog.near = 520*(1 - c) + 40; scene.fog.far = 3200*(1 - c) + 430*c;
+  } else {
+    scene.background = radarBg; scene.fog.color.copy(radarBg); scene.fog.near = 900; scene.fog.far = 3400;
+  }
+  // rain
+  const rv = mode === 0 && cloudCur > .25;
+  rain.visible = rv;
+  if (rv){
+    rainMat.opacity = Math.min(.6, cloudCur*.65);
+    for (let k = 0; k < RN; k++){
+      let y = rOff[k*3+1] - dt*270;
+      if (y < -40){ y += 180; rOff[k*3] = (Math.random()-.5)*320; rOff[k*3+2] = (Math.random()-.5)*320; }
+      rOff[k*3+1] = y;
+      const x = P.x + rOff[k*3], z = P.z + rOff[k*3+2], yy = P.y + y;
+      rPos[k*6] = x; rPos[k*6+1] = yy; rPos[k*6+2] = z;
+      rPos[k*6+3] = x + 1.2; rPos[k*6+4] = yy + 7; rPos[k*6+5] = z + .6;
+    }
+    rGeo.attributes.position.needsUpdate = true;
+  }
+
+  renderer.render(scene, camera);
+
+  hudT += dt;
+  if (hudT > .08){
+    hudT = 0; drawMini();
+    const hdg = ((-yaw*180/Math.PI) % 360 + 360) % 360;
+    $('hdg').textContent = 'HDG ' + String(Math.round(hdg)).padStart(3, '0') + '°';
+    $('alt').textContent = 'ALT ' + String(Math.round((P.y - ground + 6)*4)).padStart(3, '0') + ' m';
+    $('readout').textContent = `${DATES[dateIdx].d} · WATER +${(level*0.5).toFixed(1)} m · ${MODES[mode].name}`;
+  }
+  requestAnimationFrame(frame);
+}
+
+renderChips(); setMode(0); refreshTerrain(true);
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

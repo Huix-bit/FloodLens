@@ -1,0 +1,145 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Bandar Contoh",
+        "place": "town"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          102.199465,
+          5.544806
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Kg. Contoh Hulu",
+        "place": "village"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          102.215723,
+          5.463559
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Kg. Contoh Hilir",
+        "place": "village"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          102.217013,
+          5.602718
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Kg. Tanjung Contoh",
+        "place": "village"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          102.179364,
+          5.50676
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Kg. Padang Contoh",
+        "place": "village"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          102.205772,
+          5.577364
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Kg. Kuala Contoh",
+        "place": "village"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          102.201076,
+          5.516802
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Kg. Bukit Contoh",
+        "place": "village"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          102.212098,
+          5.485228
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Ladang Contoh Utara",
+        "place": "village"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          102.183805,
+          5.562803
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Ladang Contoh Selatan",
+        "place": "village"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          102.155544,
+          5.49219
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Kg. Sungai Contoh",
+        "place": "village"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          102.233358,
+          5.5287
+        ]
+      }
+    }
+  ]
+}

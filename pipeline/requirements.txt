@@ -1,0 +1,18 @@
+# Needed for 00_mock_data.py and check_contract.py
+numpy
+scipy
+pillow
+pyyaml
+
+# Needed for the real-data steps (01-06)
+h5py
+rasterio
+pyproj
+shapely
+geopandas
+scikit-image
+asf_search
+earthaccess
+fsspec
+s3fs
+osmnx

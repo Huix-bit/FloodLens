@@ -1,0 +1,52 @@
+{
+  "per_date": {
+    "2025-11-14": {
+      "open_flood_km2": 0.0,
+      "veg_flood_km2": 0.0,
+      "detected_km2": {
+        "optical": 0.0,
+        "cband": 0.0,
+        "lband": 0.0
+      },
+      "people_exposed": 0,
+      "roads_flooded_km": 0.0,
+      "facilities_affected": 0
+    },
+    "2025-11-26": {
+      "open_flood_km2": 46.51,
+      "veg_flood_km2": 42.18,
+      "detected_km2": {
+        "optical": 1.92,
+        "cband": 45.66,
+        "lband": 88.69
+      },
+      "people_exposed": 12931,
+      "roads_flooded_km": 58.7,
+      "facilities_affected": 13
+    },
+    "2025-12-08": {
+      "open_flood_km2": 30.39,
+      "veg_flood_km2": 18.33,
+      "detected_km2": {
+        "optical": 25.77,
+        "cband": 29.74,
+        "lband": 48.72
+      },
+      "people_exposed": 6174,
+      "roads_flooded_km": 30.9,
+      "facilities_affected": 3
+    },
+    "2025-12-20": {
+      "open_flood_km2": 12.0,
+      "veg_flood_km2": 1.1,
+      "detected_km2": {
+        "optical": 11.3,
+        "cband": 11.78,
+        "lband": 13.1
+      },
+      "people_exposed": 921,
+      "roads_flooded_km": 5.6,
+      "facilities_affected": 0
+    }
+  }
+}

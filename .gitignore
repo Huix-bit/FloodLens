@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Pipeline scratch: raw downloads and intermediates never go in the repo
+pipeline/work/
+
+# Credentials (Earthdata login lives in ~/.netrc, never here)
+.netrc
+.env
+*.pem
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+node_modules/

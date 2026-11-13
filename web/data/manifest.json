@@ -1,0 +1,172 @@
+{
+  "title": "Kelantan floods, Nov-Dec 2025 (SIMULATED)",
+  "simulated": true,
+  "crs": "EPSG:32648",
+  "bbox_utm": [
+    179500.0,
+    601740.0,
+    199980.0,
+    622220.0
+  ],
+  "bbox_wgs84": [
+    102.107133,
+    5.437029,
+    102.292685,
+    5.62295
+  ],
+  "grid": {
+    "width": 1024,
+    "height": 1024,
+    "pixel_m": 20.0
+  },
+  "dem": "dem.png",
+  "landcover": "landcover.png",
+  "dates": [
+    {
+      "date": "2025-11-14",
+      "label": "Before",
+      "nisar_track": "TBD",
+      "optical": "optical_2025-11-14.png",
+      "optical_cloud_pct": 6.0,
+      "cband": "cband_2025-11-14.png",
+      "lband": "lband_2025-11-14.png",
+      "flood": "flood_2025-11-14.png",
+      "rain_mm_prev7d": 42.0
+    },
+    {
+      "date": "2025-11-26",
+      "label": "Peak flood",
+      "nisar_track": "TBD",
+      "optical": "optical_2025-11-26.png",
+      "optical_cloud_pct": 88.0,
+      "cband": "cband_2025-11-26.png",
+      "lband": "lband_2025-11-26.png",
+      "flood": "flood_2025-11-26.png",
+      "rain_mm_prev7d": 486.0
+    },
+    {
+      "date": "2025-12-08",
+      "label": "Receding",
+      "nisar_track": "TBD",
+      "optical": "optical_2025-12-08.png",
+      "optical_cloud_pct": 45.0,
+      "cband": "cband_2025-12-08.png",
+      "lband": "lband_2025-12-08.png",
+      "flood": "flood_2025-12-08.png",
+      "rain_mm_prev7d": 131.0
+    },
+    {
+      "date": "2025-12-20",
+      "label": "Recovery",
+      "nisar_track": "TBD",
+      "optical": "optical_2025-12-20.png",
+      "optical_cloud_pct": 18.0,
+      "cband": "cband_2025-12-20.png",
+      "lband": "lband_2025-12-20.png",
+      "flood": "flood_2025-12-20.png",
+      "rain_mm_prev7d": 58.0
+    }
+  ],
+  "stats": "stats.json",
+  "hexes": "hexes.geojson",
+  "buildings": "buildings.geojson",
+  "places": "places.geojson",
+  "sources": [
+    {
+      "name": "NISAR L2 GCOV (L-band HH/HV)",
+      "provider": "NASA / ISRO via ASF DAAC",
+      "url": "https://search.asf.alaska.edu/",
+      "used_for": "L-band mode, flood and flooded-vegetation detection",
+      "nasa": true,
+      "simulated": true
+    },
+    {
+      "name": "HLS v2.0 (HLSL30 / HLSS30)",
+      "provider": "NASA LP DAAC",
+      "url": "https://doi.org/10.5067/HLS/HLSS30.002",
+      "used_for": "Optical mode, cloud cover %",
+      "nasa": true,
+      "simulated": true
+    },
+    {
+      "name": "OPERA RTC-S1 / DSWx-S1 (from Copernicus Sentinel-1)",
+      "provider": "NASA JPL OPERA via ASF DAAC / PO.DAAC; ESA Copernicus",
+      "url": "https://www.jpl.nasa.gov/go/opera",
+      "used_for": "C-band mode, open-water flood",
+      "nasa": true,
+      "simulated": true
+    },
+    {
+      "name": "NASADEM HGT v001",
+      "provider": "NASA LP DAAC",
+      "url": "https://doi.org/10.5067/MEaSUREs/NASADEM/NASADEM_HGT.001",
+      "used_for": "3D terrain, high-ground mask",
+      "nasa": true,
+      "simulated": true
+    },
+    {
+      "name": "GPM IMERG Final Daily V07",
+      "provider": "NASA GES DISC",
+      "url": "https://doi.org/10.5067/GPM/IMERGDF/DAY/07",
+      "used_for": "7-day rainfall before each pass",
+      "nasa": true,
+      "simulated": true
+    },
+    {
+      "name": "GPW v4.11 Population Count",
+      "provider": "NASA SEDAC (CIESIN)",
+      "url": "https://doi.org/10.7927/H4JW8BX5",
+      "used_for": "People exposed per hexagon",
+      "nasa": true,
+      "simulated": true
+    },
+    {
+      "name": "ESA WorldCover 10 m v200",
+      "provider": "ESA",
+      "url": "https://doi.org/10.5281/zenodo.7254221",
+      "used_for": "Land cover classes",
+      "nasa": false,
+      "simulated": true
+    },
+    {
+      "name": "Global oil palm map 2019 (Descals et al., 2021)",
+      "provider": "ESSD / Zenodo",
+      "url": "https://doi.org/10.5194/essd-13-1211-2021",
+      "used_for": "Oil palm / tree-crop class",
+      "nasa": false,
+      "simulated": true
+    },
+    {
+      "name": "JRC Global Surface Water v1.4",
+      "provider": "EC JRC / Google",
+      "url": "https://global-surface-water.appspot.com/",
+      "used_for": "Permanent water mask",
+      "nasa": false,
+      "simulated": true
+    },
+    {
+      "name": "OpenStreetMap",
+      "provider": "OpenStreetMap contributors (ODbL)",
+      "url": "https://www.openstreetmap.org/copyright",
+      "used_for": "Buildings, places, roads, facilities",
+      "nasa": false,
+      "simulated": true
+    }
+  ],
+  "stretch_db": {
+    "cband": [
+      -25.0,
+      0.0
+    ],
+    "lband": [
+      -25.0,
+      0.0
+    ]
+  },
+  "exposure_weights": {
+    "people": 0.4,
+    "flood_frac": 0.25,
+    "roads_km": 0.2,
+    "facilities": 0.15
+  }
+}
