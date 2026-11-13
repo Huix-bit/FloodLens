@@ -1,0 +1,94 @@
+// "How it works" explainer and "Data sources" list (built from manifest.sources).
+import { $ } from './state.js';
+
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+const SCENE = `
+  <rect x="0" y="104" width="200" height="26" fill="#123a5e"/>
+  <rect x="96" y="62" width="5" height="44" fill="#8b6b45"/>
+  <ellipse cx="98" cy="58" rx="34" ry="13" fill="#2f6b2a"/>
+  <path d="M14 14h16v8H14zM6 16h8v4H6zM30 16h8v4h-8z" fill="#cfe6f5"/>`;
+
+const DIAGRAMS = {
+  optical: `<svg viewBox="0 0 200 130">${SCENE}
+    <path d="M40 34q14-14 30-4q14-12 30 0q16-10 30 2q16-6 26 8q8 14-10 18H44q-22-4-4-24z" fill="#e9eef2"/>
+    <path d="M30 22L74 42" stroke="#ffd166" stroke-width="2.5" stroke-dasharray="5 4"/>
+    <text x="100" y="124" fill="#ffd166" font-size="9" text-anchor="middle" font-family="monospace">sunlight stops at the cloud</text></svg>`,
+  cband: `<svg viewBox="0 0 200 130">${SCENE}
+    <path d="M30 22L84 54" stroke="#8ecbff" stroke-width="2.5"/>
+    <path d="M84 54l-14-12M84 54l2-18M84 54l16-10M84 54l-18 2" stroke="#8ecbff" stroke-width="1.5" opacity=".8"/>
+    <text x="100" y="124" fill="#8ecbff" font-size="9" text-anchor="middle" font-family="monospace">5.6 cm wave scatters in the fronds</text></svg>`,
+  lband: `<svg viewBox="0 0 200 130">${SCENE}
+    <path d="M30 22L74 104L96 86" stroke="#00ffd0" stroke-width="2.5" fill="none"/>
+    <path d="M96 84L34 20" stroke="#00ffd0" stroke-width="2.5" stroke-dasharray="6 4"/>
+    <circle cx="96" cy="86" r="5" fill="none" stroke="#fff" stroke-width="1.5"/>
+    <text x="100" y="124" fill="#00ffd0" font-size="9" text-anchor="middle" font-family="monospace">water → trunk → back: double bounce</text></svg>`,
+};
+
+function howHtml(man) {
+  return `
+  <p>One flood, three satellites, three very different pictures. FloodLens lets you swing between them over the same ground and the same dates.</p>
+  <div class="eyes">
+    <div class="eye">${DIAGRAMS.optical}<h4 style="color:var(--o)">OPTICAL · blind in the monsoon</h4>
+      <p>Optical sensors record reflected sunlight. Sunlight cannot pass cloud, and monsoon floods happen under cloud, so the image shows cloud tops instead of the ground.</p></div>
+    <div class="eye">${DIAGRAMS.cband}<h4 style="color:var(--c)">C-BAND · stops at the canopy</h4>
+      <p>Radar brings its own illumination and passes cloud and rain. But a 5.6 cm wave is about the size of leaves and fronds: it scatters inside the crown and never reaches the water below.</p></div>
+    <div class="eye">${DIAGRAMS.lband}<h4 style="color:var(--l)">L-BAND NISAR · sees under the palms</h4>
+      <p>NISAR's 24 cm wave is larger than the fronds, so much of it passes through, mirrors off the flood water, hits a trunk and returns straight to the satellite.</p></div>
+  </div>
+  <h3>WHY OPEN WATER GOES DARK</h3>
+  <p>Radar looks sideways. Calm water is a mirror, so the pulse reflects <i>away</i> from the satellite (specular reflection) and almost nothing comes back: flooded fields turn black in both radar bands. Dry soil and crops are rough and scatter some energy back, so they look grey.</p>
+  <h3>WHY FLOODED PALMS GO BRIGHT</h3>
+  <p>Water under trees forms a right-angle corner with the trunks. A pulse that reaches it bounces twice (water, then trunk) and returns along the path it came: <b>double bounce</b>. At L-band this raises HH backscatter over flooded plantation by several decibels compared with the same trees on dry ground. C-band shows no such change because its signal never gets through the crown.</p>
+  <h3>HOW THE FLOOD MAP IS MADE</h3>
+  <ul>
+    <li>Every NISAR pass on one track is compared with the pre-flood pass, pixel by pixel.</li>
+    <li><b style="color:#2b70ff">Open-water flood</b>: HH is low <i>and</i> clearly lower than before.</li>
+    <li><b style="color:var(--l)">Flooded vegetation</b>: HH is clearly higher than before, over tree or palm land cover.</li>
+    <li>Permanent water, high ground and radar layover/shadow are masked out. Thresholds come from the image histograms.</li>
+    <li>The crosshair read-out and the small chart show this change for the pixel you are looking at.</li>
+  </ul>
+  <h3>HONEST LIMITS</h3>
+  <ul>
+    <li>Building walls also double-bounce, so towns are bright in every pass; change, not brightness alone, is what flags a flood.</li>
+    <li>Wind or heavy rain roughens water and can hide open flood; very dense forest can still block L-band.</li>
+    <li>Radar measures extent, not depth. The 3D water surface, rain, shimmer, trees and buildings are illustrative.</li>
+    <li>The Flood Exposure Ranking is a screening aid from open data, not a rescue order.</li>
+  </ul>
+  ${man.simulated ? '<p class="warn">This build runs on simulated stand-in data, so the pictures follow the physics above by construction.</p>' : ''}`;
+}
+
+function sourcesHtml(man) {
+  const list = (man.sources || []).map(s => `
+    <div class="s"><b>${esc(s.name)}</b>${s.nasa ? '<span class="tagn nasa">NASA</span>' : ''}${s.simulated ? '<span class="tagn simd">NOT YET LOADED</span>' : ''}
+      <div class="p">${esc(s.provider)}</div>
+      <div class="u">Used for: ${esc(s.used_for)}</div>
+      ${/^https?:\/\//.test(s.url || '') ? `<div class="u"><a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.url)}</a></div>` : ''}
+    </div>`).join('');
+  return `
+  ${man.simulated ? '<p class="warn">SIMULATED BUILD. Everything on screen was generated by <span class="mono">pipeline/00_mock_data.py</span>. The datasets below are what the real pipeline reads; none of them is displayed yet.</p>' : ''}
+  <p>Everything drawn from data is read from the files listed in <span class="mono">data/manifest.json</span>. Datasets marked NASA are free and open NASA Earth-science resources.</p>
+  <div class="src">${list || '<p>No sources listed in manifest.json.</p>'}</div>
+  <h3>ILLUSTRATIVE ELEMENTS (NOT DATA)</h3>
+  <p>Rain, fog, water shimmer, the height of the water surface, tree and palm models, and building heights flagged as estimated. Terrain relief is exaggerated ×2.</p>`;
+}
+
+export function closeModals() {
+  document.querySelectorAll('.modal').forEach(m => { m.hidden = true; });
+}
+
+export function openModal(id) {
+  const was = !$(id).hidden;
+  closeModals();
+  $(id).hidden = was;
+}
+
+export function initModals(man) {
+  $('howBody').innerHTML = howHtml(man);
+  $('srcBody').innerHTML = sourcesHtml(man);
+  $('btnHow').addEventListener('click', () => openModal('modalHow'));
+  $('btnSrc').addEventListener('click', () => openModal('modalSrc'));
+  document.querySelectorAll('.modal').forEach(m => m.addEventListener('click', e => {
+    if (e.target === m || e.target.closest('[data-close]')) closeModals();
+  }));
+}

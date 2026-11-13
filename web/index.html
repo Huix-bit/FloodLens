@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>FloodLens · See the flood the way NISAR does</title>
+<meta name="description" content="Fly a drone over a Malaysian flood and swing between optical, C-band and NISAR L-band radar vision to reveal flooding hidden under oil-palm canopy.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23050c12'/%3E%3Cpath d='M5 21c4-5 7 5 11 0s7 5 11 0' stroke='%2300ffd0' stroke-width='3' fill='none'/%3E%3Ccircle cx='16' cy='10' r='3' fill='%23ffd166'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<script type="importmap">
+{ "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
+</script>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="scan"><div class="sweep"></div></div>
+<div id="lensRing"><span class="mono">NISAR L-BAND LENS</span></div>
+<div id="labels"></div>
+
+<div id="brand" class="panel hud">
+  <b>FLOODLENS</b><span class="mono dim"> // FPV RADAR VISION</span>
+  <div id="caseTitle" class="mono"></div>
+  <span id="simBadge" class="sim mono" hidden>SIMULATED DATA · NOT REAL MEASUREMENTS</span>
+  <div class="btns">
+    <button id="btnHow" class="mini">HOW IT WORKS <kbd>I</kbd></button>
+    <button id="btnSrc" class="mini">DATA SOURCES <kbd>O</kbd></button>
+  </div>
+</div>
+
+<div id="modeBox" class="panel hud">
+  <div id="modeName">OPTICAL EYE</div>
+  <div id="modeSub"></div>
+  <div id="pips" class="mono"></div>
+</div>
+
+<div id="miniWrap" class="panel hud">
+  <canvas id="mini" width="340" height="340" title="Click to jump there"></canvas>
+  <div id="miniInfo" class="mono"><span id="hdg">HDG 000°</span><span id="alt">ALT 000 m</span></div>
+</div>
+
+<div id="stats" class="panel hud">
+  <h4>FLOOD DETECTED BY SENSOR</h4>
+  <div id="rows"></div>
+  <div class="note" id="note"></div>
+</div>
+
+
+<div id="timeline" class="panel hud">
+  <span class="lbl mono">NISAR<br>PASSES</span>
+  <div id="chips"></div>
+  <button id="play" class="mini" title="Play / pause the timeline (L)">▶</button>
+</div>
+
+<div id="pad" class="hud aux">
+  <button id="bQ" title="Swing left (Q)">◀ Q</button>
+  <button id="bF" title="Hold to fly forward">▲</button>
+  <button id="bE" title="Swing right (E)">E ▶</button>
+</div>
+
+<div id="rightCol" class="hud aux">
+  <div id="legend" class="panel"></div>
+  <div id="help" class="panel">
+    <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> fly · <kbd>R</kbd>/<kbd>F</kbd> up/down · <kbd>Shift</kbd> boost<br>
+    Drag to look · <b>flick left/right</b> to swing<br>
+    <kbd>Q</kbd><kbd>E</kbd> swing vision · <kbd>1</kbd>–<kbd>9</kbd> / wheel: date · <kbd>L</kbd> play<br>
+    <kbd>X</kbd> NISAR lens · <kbd>T</kbd> flood overlay · <kbd>H</kbd> home<br>
+    <kbd>P</kbd> presentation view · <kbd>I</kbd> how it works
+  </div>
+</div>
+
+<svg id="xhair" class="hud" viewBox="0 0 46 46" fill="none" stroke="currentColor" stroke-width="1.5">
+  <path d="M23 4v9M23 33v9M4 23h9M33 23h9"/><circle cx="23" cy="23" r="2.2"/>
+</svg>
+<div id="probe" class="hud mono">
+  <div id="readout"></div>
+  <div id="target"></div>
+  <canvas id="spark" width="260" height="56"></canvas>
+  <div id="sparkCap">backscatter here, pass by pass · <span class="l">L-band</span> <span class="cb">C-band</span></div>
+</div>
+
+<div id="wipe"></div><div id="flash"></div>
+<div id="toast"></div>
+
+<div id="start" class="overlay">
+  <div class="card panel">
+    <h1>FLOOD<span>LENS</span></h1>
+    <p class="tag mono">NISAR L-BAND · SEE THE FLOOD UNDER THE PALMS</p>
+    <p>You are a drone over a Malaysian river valley in the monsoon. It is raining, the sky is cloud, and the oil-palm estate looks fine from above. <b>Swing your head</b> to change which satellite's eyes you see with.</p>
+    <ul>
+      <li><b>Swing right</b> (<kbd>E</kbd> / flick right) → Optical → C-band radar → <span class="l">L-band NISAR</span></li>
+      <li><b>Swing left</b> (<kbd>Q</kbd> / flick left) → go back</li>
+      <li><b>Number keys</b> or mouse wheel → jump between satellite passes</li>
+      <li><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> + drag → fly · <kbd>X</kbd> → NISAR lens</li>
+    </ul>
+    <p id="startSim" class="warn" hidden>This build runs on SIMULATED stand-in data (terrain, flood, imagery and numbers are synthetic). Real NISAR, HLS and Sentinel-1 data replace it through the same files.</p>
+    <p id="startErr" class="warn" hidden></p>
+    <div class="go-row">
+      <button id="go" disabled>LOADING…</button>
+      <span id="loadMsg" class="mono dim"></span>
+    </div>
+  </div>
+</div>
+
+<div id="modalHow" class="overlay modal" hidden>
+  <div class="card panel wide">
+    <button class="x" data-close>✕</button>
+    <h2>HOW IT WORKS</h2>
+    <div id="howBody"></div>
+  </div>
+</div>
+
+<div id="modalSrc" class="overlay modal" hidden>
+  <div class="card panel wide">
+    <button class="x" data-close>✕</button>
+    <h2>DATA SOURCES</h2>
+    <div id="srcBody"></div>
+  </div>
+</div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
