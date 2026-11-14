@@ -88,7 +88,7 @@ function placeDrone() {
 
 function fit() {
   const [w, s, e, n] = ctx.man.bbox_wgs84, wide = innerWidth > 900;
-  map.fitBounds([[w, s], [e, n]], { padding: { top: wide ? 120 : 70, bottom: wide ? 200 : 150, left: wide ? 290 : 16, right: wide ? 60 : 16 }, duration: 0 });
+  map.fitBounds([[w, s], [e, n]], { padding: { top: wide ? 44 : 64, bottom: wide ? 112 : 176, left: wide ? 24 : 12, right: wide ? 64 : 12 }, duration: 0 });
 }
 
 async function build() {

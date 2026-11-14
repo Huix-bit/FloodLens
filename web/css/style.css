@@ -359,3 +359,6 @@ body.map2d #tape,body.map2d #xhair,body.map2d #probe,body.tour #probe,body.tour 
 #caption.opening span:first-child{color:var(--warn)}
 #caption{transition:opacity .5s}
 @media (max-width:760px){ #reveal span{font-size:15px} #caption.opening{font-size:16px;padding:10px 12px} }
+#map2d .maplibregl-popup-content{background:var(--bg);color:var(--ink);border:1px solid var(--rule);border-radius:0;padding:10px 12px;font:400 12px var(--sans);box-shadow:none}
+#map2d .maplibregl-popup-content b{display:block;margin-bottom:6px}
+#map2d .maplibregl-popup-tip{display:none}

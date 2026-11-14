@@ -43,7 +43,7 @@ export function createAtmosphere({ scene, quality, terrain, canvas }) {
       } else {
         bg.copy(radarBg); fog.near = 700; fog.far = 3600;
       }
-      top.copy(bg).multiplyScalar(state.mode === 0 ? 0.62 : 0.12);
+      top.copy(bg).multiplyScalar(state.mode === 0 ? 0.9 : 0.12);
       const css = `linear-gradient(#${top.getHexString()} 0%, #${bg.getHexString()} 46%, #${bg.getHexString()} 100%)`;
       if (css !== skyCss) { skyCss = css; canvas.style.background = css; }
       fog.color.copy(bg);
