@@ -52,12 +52,16 @@ event:
 home: { lon: 101.352, lat: 3.271 }
 default_date: "2026-11-07"
 # Opening shot: from the south-west towards the relief-centre area, high and oblique.
-home_view: { from: [101.328, 3.248], target: [101.356, 3.276], height_m: 1000 }
+home_view: { from: [101.336, 3.256], target: [101.353, 3.272], height_m: 800 }
+# One line that frames the case when the flight starts (parts separated by " · ").
+opening_caption: "3,834 people evacuated across Selangor on 7 Nov · C-band flags 0.2 km² here · NISAR flood pass awaiting NASA"
 default_mode: 1   # open in C-band, so the first swing (E) is the step to L-band
 
 # Relief centres named in the reports that could be located in OpenStreetMap (shown as labels).
 relief_centres:
-  - { name: "Relief centre: SK Dato' Maharaja Lela", lon: 101.35238, lat: 3.27123 }
+  # 393 evacuees on 14 Nov 2026 (JKM InfoBencana via BERNAMA). The other six centres named in the
+  # reports could not be located in OpenStreetMap, so they are not drawn.
+  - { name: "Relief centre · SK Dato' Maharaja Lela · 393 people (14 Nov)", lon: 101.35238, lat: 3.27123 }
 
 # First day of the event: acquisitions before it are "pre-event" for the Sentinel-1 reference.
 event_start: "2026-11-03"

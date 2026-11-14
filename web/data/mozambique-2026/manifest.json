@@ -236,16 +236,17 @@
   "default_date": "2026-01-17",
   "home_view": {
     "from": [
-      32.972,
-      -24.558
+      32.966,
+      -24.556
     ],
     "target": [
-      33.016,
-      -24.514
+      32.99,
+      -24.532
     ],
-    "height_m": 2200
+    "height_m": 1100
   },
   "default_mode": 1,
+  "opening_caption": null,
   "event": {
     "name": "Southern Mozambique floods",
     "reported": []
@@ -364,5 +365,5 @@
     "permanent_water_km2": 12.16,
     "landcover": "Tree cover is labelled 'forest / woodland' unless it lies inside an OpenStreetMap plantation or orchard polygon (then 'tree crop'); mangrove = forest; shrub, grass, crop and wetland = crop / grass."
   },
-  "generated_utc": "2026-11-14T12:38Z"
+  "generated_utc": "2026-11-14T13:09Z"
 }

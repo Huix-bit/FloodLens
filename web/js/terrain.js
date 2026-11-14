@@ -19,8 +19,8 @@ void main() {
 const FRAG = /* glsl */`
 uniform sampler2D tImgA, tImgB, tLensA, tLensB, tMaskA, tMaskB, tXA, tXB, tNormal;
 uniform float uT, uMode, uLensMode, uLens, uLensR, uDetect, uTime, uFogNear, uFogFar, uReveal, uMiss;
-uniform vec2 uRes;
-uniform vec3 uFogColor, uOpen, uVeg;
+uniform vec2 uRes, uTexel;
+uniform vec3 uFogColor, uOpen, uVeg, uOnly;
 varying vec2 vUv;
 varying vec3 vWorld;
 
@@ -35,12 +35,13 @@ vec3 look(float mode, vec3 img, vec4 m, vec4 x, float light) {
   }
   vec3 col = vec3(img.r) * mix(1.0, light, 0.2);
   if (uDetect > 0.5) {
-    vec3 water = uOpen * (1.0 + 0.16 * rip) + 0.05 * rip;
+    vec3 water = uOpen * (1.0 + 0.05 * rip);
     if (mode > 1.5) {
-      col = mix(col, water, 0.9 * m.r);
-      col = mix(col, uVeg * (0.86 + 0.14 * sin(uTime * 2.2)), 0.88 * m.g);
-      // the pixels only L-band finds flash when you arrive from C-band
-      col = mix(col, vec3(0.80, 1.0, 0.96), x.g * uReveal * (0.55 + 0.45 * sin(uTime * 13.0)));
+      // blue = flagged by both radars; lime = flagged by L-band only (stays on in L-band mode)
+      col = mix(col, water, 0.9 * max(m.r, m.g));
+      col = mix(col, uOnly * (1.0 + 0.04 * rip), 0.92 * x.g);
+      // ... and those L-band-only pixels flash when you arrive from C-band
+      col = mix(col, vec3(1.0), x.g * uReveal * (0.5 + 0.5 * sin(uTime * 13.0)) * 0.8);
     } else {
       col = mix(col, water, 0.9 * x.r);
       // ... and drain out of C-band's picture when you swing back
@@ -51,11 +52,24 @@ vec3 look(float mode, vec3 img, vec4 m, vec4 x, float light) {
   return mix(col, mix(vec3(0.05, 0.01, 0.04), vec3(0.22, 0.03, 0.14), hatch), m.a);
 }
 
+// Class masks are 20 m pixels; a small blur plus a threshold gives clean outlines instead of a dotted grid.
+vec4 soft(sampler2D a, sampler2D b) {
+  vec2 d = uTexel * 1.25;
+  vec4 s = mix(texture2D(a, vUv), texture2D(b, vUv), uT) * 2.0
+    + mix(texture2D(a, vUv + vec2(d.x, 0.0)), texture2D(b, vUv + vec2(d.x, 0.0)), uT)
+    + mix(texture2D(a, vUv - vec2(d.x, 0.0)), texture2D(b, vUv - vec2(d.x, 0.0)), uT)
+    + mix(texture2D(a, vUv + vec2(0.0, d.y)), texture2D(b, vUv + vec2(0.0, d.y)), uT)
+    + mix(texture2D(a, vUv - vec2(0.0, d.y)), texture2D(b, vUv - vec2(0.0, d.y)), uT);
+  return s / 6.0;
+}
+
 void main() {
-  vec4 m = mix(texture2D(tMaskA, vUv), texture2D(tMaskB, vUv), uT);
+  vec4 m = soft(tMaskA, tMaskB);
+  m.rg = smoothstep(0.32, 0.68, m.rg);
   vec3 n = normalize(texture2D(tNormal, vUv).xyz * 2.0 - 1.0);
   float light = clamp(dot(n, vec3(-0.5, 0.74, -0.45)) / 0.74, 0.35, 1.5);
-  vec4 x = mix(texture2D(tXA, vUv), texture2D(tXB, vUv), uT);
+  vec4 x = soft(tXA, tXB);
+  x.rg = smoothstep(0.32, 0.68, x.rg);
   vec3 col = look(uMode, mix(texture2D(tImgA, vUv), texture2D(tImgB, vUv), uT).rgb, m, x, light);
   if (uLens > 0.5) {
     float d = length(gl_FragCoord.xy - uRes * 0.5);
@@ -65,6 +79,9 @@ void main() {
     }
   }
   float fog = smoothstep(uFogNear, uFogFar, length(vWorld - cameraPosition));
+  // the data ends at the edge of the area of interest: fade it into the haze instead of a hard cut
+  float edge = min(min(vUv.x, 1.0 - vUv.x), min(vUv.y, 1.0 - vUv.y));
+  fog = max(fog, 1.0 - smoothstep(0.0, 0.05, edge));
   gl_FragColor = vec4(mix(col, uFogColor, fog), 1.0);
   #include <colorspace_fragment>
 }`;
@@ -131,6 +148,7 @@ function compareTexture(flood, cflood, w, h) {
     const c = flood[i], wet = c === FLOOD.OPEN || c === FLOOD.VEG;
     if (cflood) { if (cflood[i]) px[j] = 255; else if (wet) px[j + 1] = 255; }
     else if (c === FLOOD.OPEN) px[j] = 255;
+    else if (c === FLOOD.VEG) px[j + 1] = 255;      // no C-band mask: flooded vegetation stands in for "L-band only"
   }
   const t = new THREE.DataTexture(px, w, h, THREE.RGBAFormat);
   t.magFilter = THREE.LinearFilter; t.minFilter = THREE.LinearMipmapLinearFilter;
@@ -193,6 +211,7 @@ export function createTerrain({ man, geo, dem, quality, maxAniso }) {
     uDetect: { value: 1 }, uTime: { value: 0 }, uFogNear: { value: 1000 }, uFogFar: { value: 6000 },
     uRes: { value: new THREE.Vector2(1, 1) }, uFogColor: { value: new THREE.Color() },
     uOpen: { value: new THREE.Color(COLORS.open) }, uVeg: { value: new THREE.Color(COLORS.veg) },
+    uOnly: { value: new THREE.Color(COLORS.only) }, uTexel: { value: new THREE.Vector2(1 / w, 1 / h) },
   };
   const mesh = new THREE.Mesh(geom, new THREE.ShaderMaterial({ uniforms: U, vertexShader: VERT, fragmentShader: FRAG }));
   mesh.frustumCulled = false;

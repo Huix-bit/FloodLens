@@ -48,6 +48,7 @@ function howHtml(man) {
     <li><b style="color:var(--l)">Flooded vegetation</b>: over tree or palm land cover, HH is at least ${L ? num(L.flooded_veg_rise_db) : '3'} dB higher than before, and rises at least as much as HV.</li>
     <li>Permanent water, ground well above the nearest drainage, and tiny patches are removed. The water threshold comes from the image histogram (Otsu's method)${L?.noise_sigma_db ? `; the change thresholds are several times the measured pass-to-pass noise (${num(L.noise_sigma_db.tree_cover)} dB over trees)` : ''}.</li>
     <li>Sentinel-1 C-band gets the same open-water rule. It has no flooded-vegetation rule because its signal does not reach the ground under a canopy.</li>
+    <li><b>Colours in the view.</b> In C-band mode, blue is what C-band itself flagged. In L-band mode, <b style="color:#2b70ff">blue</b> is flood flagged by both radars and <b style="color:#b8ff3d">lime</b> is flood flagged by L-band only: the part C-band misses.</li>
     <li>The crosshair read-out and the small chart show the backscatter of the pixel you are looking at, pass by pass.</li>
   </ul>
   ${pending.length ? `<h3>What this build can and cannot show yet</h3>

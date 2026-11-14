@@ -3,10 +3,11 @@
 import * as THREE from 'three';
 import { state } from './state.js';
 
-export function createAtmosphere({ scene, quality, terrain }) {
-  const skyClear = new THREE.Color(0x9cc6e8), skyCloud = new THREE.Color(0x7b838a), radarBg = new THREE.Color(0x03080b);
-  const bg = new THREE.Color();
-  scene.background = bg;
+export function createAtmosphere({ scene, quality, terrain, canvas }) {
+  // bg is the colour at the horizon (and of the fog); the sky above it is a CSS gradient behind the canvas
+  const skyClear = new THREE.Color(0x9cc6e8), skyCloud = new THREE.Color(0x7b838a), radarBg = new THREE.Color(0x1c3541);
+  const bg = new THREE.Color(), top = new THREE.Color();
+  let skyCss = '';
   scene.fog = new THREE.Fog(0x9cc6e8, 1000, 6400);
 
   const RN = quality.rain, SPAN = 480, TALL = 270;
@@ -40,8 +41,11 @@ export function createAtmosphere({ scene, quality, terrain }) {
         bg.copy(skyClear).lerp(skyCloud, c);
         fog.near = 1040 * (1 - c) + 80; fog.far = 6400 * (1 - c) + 900 * c;
       } else {
-        bg.copy(radarBg); fog.near = 1800; fog.far = 6800;
+        bg.copy(radarBg); fog.near = 700; fog.far = 3600;
       }
+      top.copy(bg).multiplyScalar(state.mode === 0 ? 0.62 : 0.12);
+      const css = `linear-gradient(#${top.getHexString()} 0%, #${bg.getHexString()} 46%, #${bg.getHexString()} 100%)`;
+      if (css !== skyCss) { skyCss = css; canvas.style.background = css; }
       fog.color.copy(bg);
       terrain.uniforms.uFogColor.value.copy(bg);
       terrain.uniforms.uFogNear.value = fog.near; terrain.uniforms.uFogFar.value = fog.far;

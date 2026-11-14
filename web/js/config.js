@@ -17,7 +17,8 @@ export const LANDCOVER = ['Other / bare', 'Permanent water', 'Urban', 'Oil palm 
 export const LC = { OTHER: 0, WATER: 1, URBAN: 2, PALM: 3, CROP: 4, FOREST: 5 };
 export const FLOOD = { DRY: 0, PERM: 1, OPEN: 2, VEG: 3, NODATA: 255 };
 export const FLOOD_NAME = { 0: 'dry', 1: 'permanent water', 2: 'open-water flood', 3: 'flooded vegetation', 255: 'no data' };
-export const COLORS = { open: '#2b70ff', veg: '#00ffd0' };
+// open = flood flagged by both radars (or open water); only = flagged by L-band and missed by C-band
+export const COLORS = { open: '#2b70ff', veg: '#00ffd0', only: '#b8ff3d' };
 export const DEFAULT_STRETCH_DB = [-25, 0];
 
 export function pickQuality() {

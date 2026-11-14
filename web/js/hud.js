@@ -50,8 +50,10 @@ function renderBar() {
     const v = det[MODES[k].key];
     el.classList.toggle('on', k === state.mode);
     el.setAttribute('aria-selected', k === state.mode);
-    el.querySelector('b').textContent = big(v);
-    el.querySelector('i').textContent = v == null ? (MODES[k].key === 'lband' && d.lband_pending ? 'no pass' : 'no image') : 'km²';
+    // An optical "0 km²" under cloud would read as "no flood": say what the sensor actually saw.
+    const cloudy = k === 0 && d.optical_cloud_pct != null && d.optical_cloud_pct >= 50 && !(v > 1);
+    el.querySelector('b').textContent = cloudy ? `${Math.round(d.optical_cloud_pct)}%` : big(v);
+    el.querySelector('i').textContent = cloudy ? 'cloud' : v == null ? (MODES[k].key === 'lband' && d.lband_pending ? 'no pass' : 'no image') : 'km²';
   });
   const [text, warn] = statusLine(d, s);
   $('note').textContent = text;
@@ -74,10 +76,10 @@ function renderLegend() {
     ? [['#8fa37a', 'True-colour satellite image'], ['#f2f2f2', 'White: cloud, as imaged']]
     : [
       ['#05080a', 'Dark: smooth water'],
-      state.detect && [COLORS.open, m === 1 ? 'Open-water flood found by C-band' : 'Open-water flood'],
+      state.detect && [COLORS.open, m === 1 ? 'Flood flagged by C-band' : 'Flood flagged by both radars'],
       m === 2
-        ? (state.detect ? [COLORS.veg, 'Flooded under tree cover'] : ['#d8d8d8', 'Bright trees: flooded below'])
-        : ['#6c7277', 'Canopy: C-band stops here'],
+        ? (state.detect ? [COLORS.only, 'Flagged by L-band only: C-band misses it'] : ['#d8d8d8', 'Bright trees: flooded below'])
+        : ['#6c7277', 'Canopy and standing crops: C-band stops here'],
       ['#ffffff', 'Bright: buildings, trunks'],
       ['#5a1040', 'Hatched: no data'],
     ].filter(Boolean);

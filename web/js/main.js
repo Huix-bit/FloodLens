@@ -82,6 +82,14 @@ function applyPose(pose) {
   state.pos.copy(pose.pos); state.yaw = pose.yaw; state.pitch = pose.pitch;
 }
 
+/** A case can open with one line that frames the problem (shown once, large, then fades). */
+function openingCaption(text) {
+  const el = $('caption');
+  el.innerHTML = text.split(' · ').map(t => `<span>${t}</span>`).join('');
+  el.classList.add('on', 'opening');
+  setTimeout(() => { el.classList.remove('on'); setTimeout(() => el.classList.remove('opening'), 600); toast('Press E, or flick sideways, to swing to the next satellite'); }, 7000);
+}
+
 /** Case picker on the start sheet. Choosing another case reloads the page with ?case=<id>. */
 function renderCases({ list, current }) {
   const el = $('cases');
@@ -118,7 +126,8 @@ async function boot() {
   const first = await loadDate(startIdx);
 
   const canvas = $('c');
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: 'high-performance' });
+  renderer.setClearColor(0x000000, 0);                 // the sky is a CSS gradient behind the canvas
   renderer.setPixelRatio(Math.min(devicePixelRatio, quality.dpr));
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(70, 1, 1, 15000);
@@ -134,7 +143,7 @@ async function boot() {
   state.dateIdx = state.fromIdx = startIdx;
   terrain.setDates(startIdx, startIdx);
 
-  const ctx = { man, geo, terrain, scene, camera, quality, land: stat.land, stats: stat.stats, places: stat.places, buildings: stat.buildings };
+  const ctx = { man, geo, terrain, scene, camera, quality, canvas, land: stat.land, stats: stat.stats, places: stat.places, buildings: stat.buildings };
   const atmosphere = createAtmosphere(ctx);
   const vegetation = createVegetation(ctx);
   createBuildings(ctx);
@@ -208,7 +217,8 @@ async function boot() {
   go.disabled = false; go.textContent = 'Start flight'; status('');
   go.addEventListener('click', () => {
     $('start').hidden = true; state.started = true; document.body.classList.add('started');
-    toast(state.mode === 1 ? 'Press E, or flick sideways, to swing to NISAR L-band' : 'Press E, or flick sideways, to swing to the next satellite');
+    if (man.opening_caption) openingCaption(man.opening_caption);
+    else toast(state.mode === 1 ? 'Press E, or flick sideways, to swing to NISAR L-band' : 'Press E, or flick sideways, to swing to the next satellite');
   });
 
   // Remaining passes load in the background so the first frame is never held up.

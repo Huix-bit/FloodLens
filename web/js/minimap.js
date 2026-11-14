@@ -23,8 +23,9 @@ export function initMinimap({ man, geo, places }) {
       const row = Math.min(h - 1, (y + 0.5) / SIZE * h | 0) * w;
       for (let x = 0; x < SIZE; x++, j += 4) {
         const k = row + Math.min(w - 1, (x + 0.5) / SIZE * w | 0), c = flood[k];
-        if (lband || !cflood ? c === FLOOD.OPEN : cflood[k]) { d[j] = 43; d[j + 1] = 112; d[j + 2] = 255; d[j + 3] = 200; }
-        else if (c === FLOOD.VEG && lband) { d[j] = 0; d[j + 1] = 255; d[j + 2] = 208; d[j + 3] = 215; }
+        const wet = c === FLOOD.OPEN || c === FLOOD.VEG;
+        if (lband && wet && (cflood ? !cflood[k] : c === FLOOD.VEG)) { d[j] = 184; d[j + 1] = 255; d[j + 2] = 61; d[j + 3] = 225; }   // L-band only
+        else if (lband ? wet : (cflood ? cflood[k] : c === FLOOD.OPEN)) { d[j] = 43; d[j + 1] = 112; d[j + 2] = 255; d[j + 3] = 200; }
         else d[j + 3] = 0;
       }
     }

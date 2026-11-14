@@ -240,6 +240,7 @@ def main():
         "default_date": cfg.get("default_date"),
         "home_view": cfg.get("home_view"),
         "default_mode": cfg.get("default_mode"),
+        "opening_caption": cfg.get("opening_caption"),
         "event": cfg.get("event"),
         "method": {"reference_dates": detect["reference_dates"], "lband": detect["lband"], "cband": detect["cband"],
                    "optical": detect["optical"], "permanent_water_km2": detect["permanent_water_km2"],

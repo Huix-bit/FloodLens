@@ -241,16 +241,17 @@
   "default_date": "2026-11-07",
   "home_view": {
     "from": [
-      101.328,
-      3.248
+      101.336,
+      3.256
     ],
     "target": [
-      101.356,
-      3.276
+      101.353,
+      3.272
     ],
-    "height_m": 1000
+    "height_m": 800
   },
   "default_mode": 1,
+  "opening_caption": "3,834 people evacuated across Selangor on 7 Nov · C-band flags 0.2 km² here · NISAR flood pass awaiting NASA",
   "event": {
     "name": "Kuala Selangor floods",
     "reported": [
@@ -340,5 +341,5 @@
     "permanent_water_km2": 46.56,
     "landcover": "Tree cover is labelled 'oil palm / tree crop' unless it lies inside an OpenStreetMap forest, wood, wetland or protected-area polygon (then 'forest'); mangrove = forest."
   },
-  "generated_utc": "2026-11-14T12:37Z"
+  "generated_utc": "2026-11-14T13:08Z"
 }

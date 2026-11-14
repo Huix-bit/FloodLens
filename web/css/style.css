@@ -129,7 +129,7 @@ body.present .btns{display:none}
 @media (pointer:coarse){ #pad{display:block} }
 
 /* ---------- effects ---------- */
-#scan{position:fixed;inset:0;pointer-events:none;opacity:0;transition:opacity .35s;background:repeating-linear-gradient(0deg,rgba(0,0,0,.17) 0 1px,transparent 1px 3px)}
+#scan{position:fixed;inset:0;pointer-events:none;opacity:0;transition:opacity .35s;background:repeating-linear-gradient(0deg,rgba(0,0,0,.08) 0 1px,transparent 1px 3px)}
 #scan.on{opacity:1}
 #lensRing{position:fixed;left:50%;top:50%;width:40vmin;height:40vmin;transform:translate(-50%,-50%);border-radius:50%;border:2px solid var(--l);outline:1px solid #000;pointer-events:none;opacity:0;transition:opacity .2s}
 #lensRing.on{opacity:1}
@@ -351,3 +351,11 @@ body.map2d #tape,body.map2d #xhair,body.map2d #probe,body.tour #probe,body.tour 
 .seg b,#reveal b{font-family:var(--sans);font-variant-numeric:tabular-nums;letter-spacing:-.01em}
 @media (max-width:760px){ #play{display:none} }
 #play{right:auto;left:14px;top:5px;font-size:10.5px}
+
+/* v4 */
+#reveal span,#reveal b{white-space:nowrap}
+#caption.opening{bottom:auto;top:30%;max-width:min(980px,94vw);padding:14px 22px;font-size:25px;font-weight:700}
+#caption.opening span{display:block;white-space:nowrap}
+#caption.opening span:first-child{color:var(--warn)}
+#caption{transition:opacity .5s}
+@media (max-width:760px){ #reveal span{font-size:15px} #caption.opening{font-size:16px;padding:10px 12px} }

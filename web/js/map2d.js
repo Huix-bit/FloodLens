@@ -33,13 +33,14 @@ function paintUnderlay() {
   if (!data) return;
   if (data[key]) g.drawImage(data[key], 0, 0);
   if (!state.detect || state.mode === 0) return;
-  const layer = new ImageData(w, h), px = layer.data, f = data.flood, cf = state.mode === 1 ? data.cflood : null;
-  const open = [0x2b, 0x70, 0xff], veg = [0x00, 0xff, 0xd0];
+  const layer = new ImageData(w, h), px = layer.data, f = data.flood, cf = data.cflood, lband = state.mode === 2;
+  const open = [0x2b, 0x70, 0xff], only = [0xb8, 0xff, 0x3d];
   for (let i = 0, j = 0; i < f.length; i++, j += 4) {
     const v = f[i];
     let col = null, alpha = 215;
-    if (cf ? cf[i] : v === FLOOD.OPEN) col = open;
-    else if (v === FLOOD.VEG && state.mode === 2) col = veg;           // only L-band shows flooded vegetation
+    const wet = v === FLOOD.OPEN || v === FLOOD.VEG;
+    if (lband && wet) col = (cf ? !cf[i] : v === FLOOD.VEG) ? only : open;   // lime = L-band only, blue = both radars
+    else if (!lband && (cf ? cf[i] : v === FLOOD.OPEN)) col = open;           // C-band mode: C-band's own flood
     else if (v === 255 && ((i % w) + ((i / w) | 0)) % 6 < 2) { col = [0x5a, 0x10, 0x40]; alpha = 200; }
     if (col) { px[j] = col[0]; px[j + 1] = col[1]; px[j + 2] = col[2]; px[j + 3] = alpha; }
   }
