@@ -1,0 +1,14 @@
+{
+  "cases": [
+    {
+      "id": "selangor-2026",
+      "path": "selangor-2026/",
+      "name": "Kuala Selangor, Malaysia, Nov 2026",
+      "tagline": "Live event. Four NISAR passes before the flood; the flood pass is awaiting release by NASA.",
+      "order": 2,
+      "passes": 5,
+      "pending": 1
+    }
+  ],
+  "default": "selangor-2026"
+}

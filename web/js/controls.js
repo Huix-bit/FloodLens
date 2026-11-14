@@ -25,6 +25,9 @@ export function initControls({ canvas, geo, terrain, actions }) {
     else if (e.code === 'KeyH') actions.goHome();
     else if (e.code === 'KeyI') actions.openModal('modalHow');
     else if (e.code === 'KeyO') actions.openModal('modalSrc');
+    else if (e.code === 'KeyK') actions.openModal('modalRank');
+    else if (e.code === 'KeyM') actions.toggleMap();
+    else if (e.code === 'KeyG') actions.toggleTour();
   });
   addEventListener('keyup', e => { keys[e.code] = false; });
   addEventListener('blur', () => { for (const k in keys) keys[k] = false; holdForward = false; });

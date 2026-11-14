@@ -240,15 +240,22 @@ def stage_landcover(cfg, grid, work):
     lc[np.isin(wc, (20, 30, 40, 90))] = 4
     lc[wc == 95] = 5                                   # mangrove
     tree = wc == 10
-    lc[tree] = 3                                        # tree cover outside mapped forest = plantation / tree crop
-    lc[tree & forest & ~plantation] = 5
+    if cfg.get("landcover", {}).get("tree_default", "tree_crop") == "forest":
+        lc[tree] = 5                                    # natural woodland region: tree cover is forest ...
+        lc[tree & plantation] = 3                       # ... unless OSM maps a plantation / orchard
+        method = ("Tree cover is labelled 'forest / woodland' unless it lies inside an OpenStreetMap plantation or "
+                  "orchard polygon (then 'tree crop'); mangrove = forest; shrub, grass, crop and wetland = crop / grass.")
+    else:
+        lc[tree] = 3                                    # plantation region: tree cover outside mapped forest = tree crop
+        lc[tree & forest & ~plantation] = 5
+        method = ("Tree cover is labelled 'oil palm / tree crop' unless it lies inside an OpenStreetMap "
+                  "forest, wood, wetland or protected-area polygon (then 'forest'); mangrove = forest.")
     np.save(work / "landcover.npy", lc)
     names = ["other", "water", "urban", "palm/tree crop", "crop/grass", "forest"]
     share = {names[k]: round(float((lc == k).mean() * 100), 1) for k in range(6)}
     note(work, "landcover", {"name": "ESA WorldCover 10 m 2021 v200", "provider": "ESA / VITO",
                              "url": "https://doi.org/10.5281/zenodo.7254221", "nasa": False,
-                             "method": "Tree cover is labelled 'oil palm / tree crop' unless it lies inside an OpenStreetMap "
-                                       "forest, wood, wetland or protected-area polygon (then 'forest'); mangrove = forest.",
+                             "method": method,
                              "share_pct": share})
     print(f"  landcover: {share}")
 
@@ -277,8 +284,9 @@ def stage_water(cfg, grid, work):
 # --------------------------------------------------------------------------- population
 def stage_pop(cfg, grid, work):
     import rasterio
-    url = "https://data.worldpop.org/GIS/Population/Global_2015_2030/R2025A/2026/MYS/v1/100m/constrained/mys_pop_2026_CN_100m_R2025A_v1.tif"
-    src = download(url, work / "pop" / url.split("/")[-1])
+    popcfg = cfg.get("population", {})
+    url = popcfg.get("url", "https://data.worldpop.org/GIS/Population/Global_2015_2030/R2025A/2026/MYS/v1/100m/constrained/mys_pop_2026_CN_100m_R2025A_v1.tif")
+    src = download(url, work.parent / "_shared" / "pop" / url.split("/")[-1])
     with rasterio.open(src) as ds:
         res_deg = ds.res[0]
         nod = ds.nodata
@@ -287,7 +295,7 @@ def stage_pop(cfg, grid, work):
     per_cell = read_to_grid(str(src), grid, "nearest", dst_nodata=0, src_nodata=nod)
     pop = np.clip(per_cell, 0, None) * (grid.pixel_m ** 2 / cell_m2)       # people per 20 m pixel
     np.save(work / "pop.npy", pop.astype("float32"))
-    note(work, "pop", {"name": "WorldPop Global 2015-2030 (R2025A) constrained 100 m population, 2026, Malaysia",
+    note(work, "pop", {"name": popcfg.get("name", "WorldPop Global 2015-2030 (R2025A) constrained 100 m population, 2026, Malaysia"),
                        "provider": "WorldPop, University of Southampton (CC BY 4.0)", "url": "https://www.worldpop.org/", "nasa": False})
     print(f"  pop: {pop.sum():,.0f} people in the AOI")
 
@@ -396,29 +404,45 @@ def stage_optical(cfg, grid, work):
     session = ea.get_requests_https_session()
     out = work / "optical"
     out.mkdir(exist_ok=True)
+    groups: dict[tuple, list] = {}
+    for sc in scenes:                                        # same sensor, same day = one acquisition
+        groups.setdefault((sc["sensor"], sc["when"].strftime("%Y-%m-%d")), []).append(sc)
+    acqs = [{"sensor": k[0], "day": k[1], "tiles": v, "when": min(t["when"] for t in v)} for k, v in groups.items()]
     chosen = {}
     for date, when in times.items():
-        cands = sorted(scenes, key=lambda s: abs((s["when"] - when).total_seconds()))
         done = False
-        for s in cands[:4]:                                  # nearest scene that actually covers the AOI
-            if abs((s["when"] - when).total_seconds()) > 8 * 86400:
+        for acq in sorted(acqs, key=lambda q: abs((q["when"] - when).total_seconds()))[:6]:
+            if abs((acq["when"] - when).total_seconds()) > 8 * 86400:
                 break
-            d = out / s["id"]
-            fm = read_to_grid(str(download(s["urls"]["Fmask"], d / "Fmask.tif", session)), grid, "nearest", dst_nodata=255, dtype="uint8", src_nodata=255)
-            if fm is None or (fm == 255).mean() > 0.2:
-                continue
-            rgb = [read_to_grid(str(download(s["urls"][b], d / f"{b}.tif", session)), grid, "bilinear", src_nodata=-9999) for b in s["bands"]]
-            np.savez_compressed(out / f"{date}.npz", rgb=np.stack(rgb).astype("float32") * 0.0001, fmask=fm)
-            cloud = ((fm & 0b00000010) > 0) | ((fm & 0b00000100) > 0) | ((fm & 0b00001000) > 0)   # cloud, adjacent, shadow
+            fm = np.full((grid.height, grid.width), 255, dtype="uint8")
+            for t in acq["tiles"]:
+                part = read_to_grid(str(download(t["urls"]["Fmask"], out / t["id"] / "Fmask.tif", session)), grid, "nearest",
+                                    dst_nodata=255, dtype="uint8", src_nodata=255)
+                if part is not None:
+                    fm = np.where(fm == 255, part, fm)
+            if (fm == 255).mean() > 0.2:
+                continue                                     # this acquisition does not cover the AOI
+            bands = []
+            for k in range(len(acq["tiles"][0]["bands"])):
+                band = np.full((grid.height, grid.width), np.nan, dtype="float32")
+                for t in acq["tiles"]:
+                    part = read_to_grid(str(download(t["urls"][t["bands"][k]], out / t["id"] / f"{t['bands'][k]}.tif", session)),
+                                        grid, "bilinear", src_nodata=-9999)
+                    if part is not None:
+                        band = np.where(np.isnan(band), part, band)
+                bands.append(band)
+            np.savez_compressed(out / f"{date}.npz", rgb=np.stack(bands).astype("float32") * 0.0001, fmask=fm)
+            cloud = (fm & 0b00001110) > 0                    # cloud, adjacent to cloud, cloud shadow
             valid = fm != 255
-            chosen[date] = {"scene": s["id"], "acquired": s["when"].strftime("%Y-%m-%dT%H:%MZ"),
-                            "offset_days": round((s["when"] - when).total_seconds() / 86400, 1),
+            chosen[date] = {"scene": " + ".join(t["id"] for t in acq["tiles"]), "acquired": acq["when"].strftime("%Y-%m-%dT%H:%MZ"),
+                            "offset_days": round((acq["when"] - when).total_seconds() / 86400, 1),
                             "cloud_pct": round(float(cloud[valid].mean() * 100), 1)}
-            print(f"  optical {date}: {s['id']} ({chosen[date]['offset_days']:+.1f} d), cloud/shadow {chosen[date]['cloud_pct']}%")
+            print(f"  optical {date}: {acq['sensor']} {acq['day']} ({chosen[date]['offset_days']:+.1f} d, {len(acq['tiles'])} tile(s)), "
+                  f"cloud/shadow {chosen[date]['cloud_pct']}%")
             done = True
             break
         if not done:
-            print(f"  optical {date}: no HLS scene within 8 days")
+            print(f"  optical {date}: no HLS acquisition covering the AOI within 8 days")
     note(work, "optical", {"name": "Harmonized Landsat and Sentinel-2 (HLS) surface reflectance v2.0 (HLSS30 / HLSL30)",
                            "provider": "NASA LP DAAC", "url": "https://doi.org/10.5067/HLS/HLSS30.002", "nasa": True, "dates": chosen})
 

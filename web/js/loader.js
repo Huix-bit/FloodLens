@@ -1,6 +1,23 @@
 // Reads web/data/ strictly through manifest.json (the data contract). Nothing else touches the network.
 
-const BASE = 'data/';
+let BASE = 'data/';
+
+/**
+ * Case studies: data/cases.json lists them, each in its own folder holding one full data contract.
+ * ?case=<id> picks one; otherwise the registry's default. With no registry, data/ itself is the case.
+ */
+/** URL of a file of the current case (for consumers that take a URL, such as the 2D map). */
+export const dataUrl = name => BASE + name;
+
+export async function loadCases() {
+  let reg = null;
+  try { const r = await fetch('data/cases.json', { cache: 'no-cache' }); if (r.ok) reg = await r.json(); } catch { /* single-case build */ }
+  const list = reg?.cases || [], want = new URLSearchParams(location.search).get('case');
+  let current = null;
+  if (want && /^[\w-]+$/.test(want)) { current = want; BASE = `data/${(list.find(c => c.id === want)?.path) || want + '/'}`; }
+  else if (list.length) { const c = list.find(x => x.id === reg.default) || list[0]; current = c.id; BASE = 'data/' + c.path; }
+  return { list, current };
+}
 let manifest = null;
 const dateCache = new Map();
 

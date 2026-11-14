@@ -52,7 +52,7 @@ exposure:
 
 paths:
   work_dir: "pipeline/work"      # raw + intermediate files (git-ignored)
-  web_data: "web/data"
+  web_data: "web/data/mock"   # open with ?case=mock; not listed in cases.json
 
 # Used only by 00_mock_data.py
 mock:

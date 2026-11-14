@@ -125,7 +125,8 @@ def main():
     else:
         hand = dem - np.percentile(dem, 2)
     low = hand <= thr["max_hand_m"]
-    trees = np.isin(lc, (LC_PALM, LC_FOREST))
+    # Land-cover classes where an HH rise may be called flooded vegetation (default: tree classes).
+    trees = np.isin(lc, tuple(cfg.get("flooded_veg_classes", (LC_PALM, LC_FOREST))))
     land = ~perm
     np.save(out / "permanent_water.npy", perm)
     np.save(out / "hand.npy", hand.astype("float32"))
@@ -183,6 +184,13 @@ def main():
                 rv = reference({k: v for k, v in hv.items() if v is not None}, d, refs)
                 if rv is not None:
                     veg &= (delta >= (hv[d] - rv)) | ~np.isfinite(hv[d] - rv)
+            near_m = thr.get("veg_max_distance_to_open_m")
+            if near_m:
+                # Optional: keep flooded vegetation only close to detected open water. Rain raises
+                # L-band backscatter over whole regions; a flood is contiguous with its open water.
+                seeds = drop_small(open_w, min_px)
+                dist = ndi.distance_transform_edt(~seeds) * grid.pixel_m if seeds.any() else np.full(cur.shape, np.inf)
+                veg &= dist <= near_m
             both = drop_small(open_w | veg, min_px)
             cls[veg & both] = VEG
             cls[open_w & both] = OPEN

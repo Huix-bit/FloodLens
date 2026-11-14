@@ -4,6 +4,12 @@
 
 title: "Kuala Selangor floods, November 2026"
 
+# How this case appears in the start-screen picker (web/data/cases.json).
+case:
+  name: "Kuala Selangor, Malaysia, Nov 2026"
+  tagline: "Live event. Four NISAR passes before the flood; the flood pass is awaiting release by NASA."
+  order: 2
+
 aoi:
   # Centre of the area of interest (WGS84): Ijok / Bukit Rotan / Jeram, Kuala Selangor district,
   # Selangor, Malaysia. Chosen because the relief centres opened for this flood (Parit Mahang,
@@ -91,4 +97,4 @@ exposure:
 
 paths:
   work_dir: "pipeline/work"      # raw + intermediate files (git-ignored)
-  web_data: "web/data"
+  web_data: "web/data/selangor-2026"

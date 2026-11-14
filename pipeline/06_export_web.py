@@ -238,6 +238,17 @@ def main():
                    "landcover": anc.get("landcover", {}).get("method")},
         "generated_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%MZ"),
     })
+    # Register the case for the start-screen picker (web/data/cases.json, one folder per case).
+    case = cfg.get("case")
+    if case:
+        reg_path = out.parent / "cases.json"
+        reg = json.loads(reg_path.read_text(encoding="utf-8")) if reg_path.exists() else {"cases": []}
+        reg["cases"] = [c for c in reg["cases"] if c["id"] != out.name]
+        reg["cases"].append({"id": out.name, "path": out.name + "/", "name": case["name"], "tagline": case.get("tagline", ""),
+                             "order": case.get("order", 99), "passes": len(entries), "pending": len(pending)})
+        reg["cases"].sort(key=lambda c: c["order"])
+        reg["default"] = next((c["id"] for c in reg["cases"]), None)
+        write_json(reg_path, reg)
     size = sum(f.stat().st_size for f in out.iterdir()) / 1e6
     print(f"wrote {len(list(out.iterdir()))} files, {size:.1f} MB -> {out}")
     print(f"  passes {[e['date'] for e in entries]}  pending {[p['date'] for p in pending]}  buildings {len(buildings['features'])}")

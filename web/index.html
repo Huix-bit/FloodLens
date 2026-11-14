@@ -26,6 +26,8 @@
   <g stroke="#000" stroke-width="3.5"><path d="M23 5v9M23 32v9M5 23h9M32 23h9"/></g>
   <g stroke="#fff" stroke-width="1.5"><path d="M23 5v9M23 32v9M5 23h9M32 23h9"/></g>
 </svg>
+<div id="map2d"></div>
+<div id="caption" class="osd"></div>
 <div id="osdAlt" class="hud osd">ALT <b id="alt">0</b> m</div>
 <div id="probe" class="hud osd">
   <div id="readout"></div>
@@ -41,6 +43,9 @@
   <nav class="btns">
     <button id="btnHow" class="link">How it works <kbd>I</kbd></button>
     <button id="btnSrc" class="link">Data sources <kbd>O</kbd></button>
+    <button id="btnRank" class="link">Exposure ranking <kbd>K</kbd></button>
+    <button id="btnMap" class="link">2D map <kbd>M</kbd></button>
+    <button id="btnTour" class="link">Tour <kbd>G</kbd></button>
   </nav>
   <dl id="help" class="aux">
     <dt><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></dt><dd>fly · drag to look</dd>
@@ -102,6 +107,7 @@
       <li><span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> and drag to fly. <kbd>X</kbd> opens a lens onto another sensor.</span></li>
     </ol>
     <p id="startSim" class="warn" hidden>This build runs on simulated stand-in data: terrain, flood, imagery and numbers are synthetic. Real NISAR, HLS and Sentinel-1 data replace it through the same files.</p>
+    <div id="cases" class="cases" hidden></div>
     <p id="startReal" class="real" hidden></p>
     <p id="startErr" class="warn" hidden></p>
     <div class="go-row">
@@ -116,6 +122,14 @@
     <button class="x" data-close aria-label="Close">Close <kbd>Esc</kbd></button>
     <h2>How it works</h2>
     <div id="howBody"></div>
+  </div>
+</div>
+
+<div id="modalRank" class="overlay modal" hidden>
+  <div class="card">
+    <button class="x" data-close aria-label="Close">Close <kbd>Esc</kbd></button>
+    <h2>Flood exposure ranking</h2>
+    <div id="rankBody"></div>
   </div>
 </div>
 

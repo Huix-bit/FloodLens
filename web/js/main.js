@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { MODES, UNIT_M, V_EXAG, pickQuality } from './config.js';
 import { $, clamp, emit, on, state } from './state.js';
 import { makeGeo } from './geo.js';
-import { loadDate, loadManifest, loadStatic } from './loader.js';
+import { loadCases, loadDate, loadManifest, loadStatic } from './loader.js';
 import { createTerrain } from './terrain.js';
 import { createVegetation } from './vegetation.js';
 import { createBuildings } from './buildings.js';
@@ -16,6 +16,9 @@ import { initMinimap } from './minimap.js';
 import { initProbe } from './probe.js';
 import { initLabels } from './labels.js';
 import { closeModals, initModals, openModal } from './modals.js';
+import { initReport } from './report.js';
+import { initMap2d, mapFlyTo, toggleMap } from './map2d.js';
+import { initTour, toggleTour, updateTour } from './tour.js';
 
 const status = msg => { $('loadMsg').textContent = msg; };
 
@@ -68,9 +71,25 @@ function applyPose(pose) {
   state.pos.copy(pose.pos); state.yaw = pose.yaw; state.pitch = pose.pitch;
 }
 
+/** Case picker on the start sheet. Choosing another case reloads the page with ?case=<id>. */
+function renderCases({ list, current }) {
+  const el = $('cases');
+  if (list.length < 2) return;
+  el.hidden = false;
+  el.innerHTML = '<h4>Choose a flood</h4>' + list.map(c =>
+    `<button class="case ${c.id === current ? 'on' : ''}" data-id="${c.id}" aria-pressed="${c.id === current}">`
+    + `<b>${c.name}</b><span>${c.tagline || ''}</span></button>`).join('');
+  el.addEventListener('click', e => {
+    const b = e.target.closest('.case');
+    if (b && b.dataset.id !== current) location.href = `${location.pathname}?case=${encodeURIComponent(b.dataset.id)}`;
+  });
+}
+
 async function boot() {
   const quality = pickQuality();
   status('reading manifest');
+  const cases = await loadCases();
+  renderCases(cases);
   const man = await loadManifest();
   $('startSim').hidden = !man.simulated;
   if (!man.simulated) {
@@ -125,11 +144,20 @@ async function boot() {
     togglePlay: () => toast(togglePlay() ? 'Timeline playing' : 'Timeline paused'),
     toggleDetect() { state.detect = !state.detect; terrain.setDetect(state.detect); emit('detect'); toast('Flood overlay ' + (state.detect ? 'ON' : 'OFF')); },
     toggleLens() { setLens(!state.lens); toast(state.lens ? 'Lens ON · the circle shows another sensor' : 'Lens OFF'); },
-    goHome() { applyPose(state.home); toast('Back to the start view'); },
+    goHome({ quiet = false } = {}) { applyPose(state.home); emit('moved'); if (!quiet) toast('Back to the start view'); },
+    /** Put the drone above a lon/lat, looking at it (ranking list, 2D map). */
+    jumpTo(lon, lat) {
+      if (mapFlyTo(lon, lat)) return;
+      applyPose(homePose(geo, terrain, null, null, null, [lon, lat])); emit('moved');
+    },
+    toggleMap: () => toggleMap(),
+    toggleTour: () => toggleTour(),
   };
 
   on('mode', m => { terrain.setMode(m); if (state.lens) setLens(true); });
+  ctx.hexes = stat.hexes;
   initHud(ctx, { swingTo }); initTimeline(ctx); initModals(man);
+  initReport(ctx, actions); initMap2d(ctx, actions); initTour(ctx, actions);
   const updateControls = initControls({ canvas, geo, terrain, actions });
   const drawMini = initMinimap(ctx), updateProbe = initProbe(ctx), updateLabels = initLabels(ctx);
   setMode(hash.mode ?? 0);
@@ -147,6 +175,7 @@ async function boot() {
   function frame(now) {
     const dt = Math.min(0.05, (now - last) / 1000); last = now; time += dt;
     const bob = updateControls(dt);
+    updateTour(dt);
     updateTimeline(dt);
     const sw = updateSwing(dt);
     camera.position.set(state.pos.x, state.pos.y + bob.y, state.pos.z);

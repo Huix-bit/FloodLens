@@ -1,0 +1,80 @@
+# FloodLens case study 2: southern Mozambique floods, January 2026 (Limpopo river at Chokwe).
+# Chosen as a global validation case: NASA published its own NISAR visualization of this flood
+# (https://svs.gsfc.nasa.gov/5661, 5 Jan vs 17 Jan 2026, close-ups of Chokwe and Macia), so the
+# FloodLens result can be compared with it.
+# Run every step with:  --config pipeline/config.mozambique.yaml
+
+title: "Limpopo floods at Chokwe, Mozambique, January 2026"
+
+case:
+  name: "Chokwe, Mozambique, Jan 2026"
+  tagline: "Global validation. NISAR imaged this flood on 17 Jan 2026; NASA published the same scene."
+  order: 1
+
+aoi:
+  # Chokwe town, the Limpopo river and its floodplain, Gaza province.
+  center_lon: 33.00
+  center_lat: -24.53
+  width: 1024
+  height: 1024
+  pixel_m: 20
+  epsg: 32736
+
+# NISAR track 114 ascending, 03:42 UTC, 12-day repeat.
+dates:
+  - { date: "2025-11-30", label: "Baseline" }
+  - { date: "2025-12-12", label: "Baseline" }
+  - { date: "2025-12-24", label: "Baseline" }
+  - { date: "2026-01-05", label: "Before flood" }
+  - { date: "2026-01-17", label: "Flood" }
+
+home: { lon: 32.99, lat: -24.53 }
+default_date: "2026-01-17"
+
+event:
+  name: "Southern Mozambique floods"
+  reported: []
+
+event_start: "2026-01-10"
+reference_dates: ["2025-11-30", "2025-12-12", "2025-12-24", "2026-01-05"]
+
+nisar:
+  search_start: "2025-11-25"
+  search_end: "2026-01-22"
+  product: "GCOV"
+  collections:
+    - { short_name: "NISAR_L2_GCOV_V1", concept_id: "C3622241360-ASF" }
+    - { short_name: "NISAR_L2_GCOV_PROVISIONAL_V1", concept_id: "C2854338529-ASF" }
+    - { short_name: "NISAR_L2_GCOV_BETA_V1", concept_id: "C3622214170-ASF" }
+  track: 114
+  direction: "ASCENDING"
+  frequency: "A"
+
+stretch_db:
+  cband: [-25.0, 0.0]
+  lband: [-25.0, 0.0]
+
+thresholds:
+  open_water_hh_db: -18.0
+  open_water_drop_db: 3.0
+  flooded_veg_rise_db: 3.0
+  permanent_water_occurrence: 80
+  max_hand_m: 15.0
+  min_patch_px: 12
+
+# Savanna and floodplain: most tree cover here is natural woodland, not plantation.
+landcover:
+  tree_default: "forest"
+flooded_veg_classes: [3, 5]
+
+population:
+  url: "https://data.worldpop.org/GIS/Population/Global_2015_2030/R2025A/2026/MOZ/v1/100m/constrained/moz_pop_2026_CN_100m_R2025A_v1.tif"
+  name: "WorldPop Global 2015-2030 (R2025A) constrained 100 m population, 2026, Mozambique"
+
+exposure:
+  hex_flat_to_flat_m: 1000
+  weights: { people: 0.40, flood_frac: 0.25, roads_km: 0.20, facilities: 0.15 }
+
+paths:
+  work_dir: "pipeline/work/mozambique"
+  web_data: "web/data/mozambique-2026"

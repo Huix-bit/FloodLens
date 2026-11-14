@@ -244,3 +244,47 @@ body.present #console{grid-template-columns:300px minmax(320px,1fr) 208px}
 .chip.pending .tick{margin:0 0 3px 13px}
 .chip.pending small{white-space:normal;line-height:1.2}
 #chips.dense .chip.pending{width:92px;margin-left:-13px} #chips.dense .chip.pending small{display:block}
+
+/* case picker on the start sheet */
+.cases{margin:14px 0 4px}
+.cases h4{margin:0 0 6px;font:400 11px var(--mono);color:var(--mute)}
+.case{display:grid;grid-template-columns:14px 1fr;column-gap:10px;width:100%;padding:9px 10px;margin-top:-1px;background:none;border:1px solid var(--rule);color:var(--ink);text-align:left;cursor:pointer;font-family:var(--sans)}
+.case::before{content:"";grid-row:1/3;align-self:start;width:10px;height:10px;margin-top:4px;border:1px solid var(--mute);border-radius:50%}
+.case b{font-size:13.5px} .case span{grid-column:2;font-size:11.5px;line-height:1.4;color:var(--mute)}
+.case:hover{border-color:var(--mute);position:relative}
+.case.on{border-color:var(--l);position:relative;cursor:default} .case.on::before{background:var(--l);border-color:var(--l)}
+
+/* ranking sheet */
+.btns{display:flex;flex-wrap:wrap;gap:6px 14px}
+.modal .sub{font:400 11.5px var(--mono);color:var(--mute);margin:0 0 10px}
+.tools{display:flex;gap:18px;margin:12px 0 14px}
+.rank{width:100%;border-collapse:collapse;font-size:12.5px}
+.rank th{font:400 10.5px var(--mono);color:var(--mute);text-align:right;padding:5px 6px;border-bottom:1px solid var(--rule)}
+.rank td{padding:6px;border-bottom:1px solid var(--rule);text-align:right;font-family:var(--mono);white-space:nowrap}
+.rank th:nth-child(2),.rank td:nth-child(2){text-align:left;font-family:var(--sans);white-space:normal}
+.rank tbody tr{cursor:pointer} .rank tbody tr:hover td,.rank tbody tr:focus td{background:var(--bg2);outline:0}
+.sbar{display:inline-block;width:46px;height:5px;margin-right:7px;background:var(--bg2);vertical-align:middle}
+.sbar i{display:block;height:100%;background:var(--warn)}
+#sumText{white-space:pre-wrap;font:400 11.5px/1.55 var(--mono);background:var(--bg2);padding:12px 14px;margin:8px 0;border-left:2px solid var(--rule);user-select:text}
+
+/* 2D map */
+#map2d{position:fixed;inset:0;display:none;background:#0b1114}
+body.map2d #map2d{display:block}
+body.map2d #tape,body.map2d #xhair,body.map2d #osdAlt,body.map2d #probe,body.map2d #labels,body.map2d #lensRing,body.map2d #scan,body.map2d #pad,body.map2d #miniWrap{display:none}
+.mplace{font:700 12px var(--sans);color:#fff;text-shadow:0 0 3px #000,0 0 3px #000;padding-bottom:9px;background:linear-gradient(#fff,#fff) center bottom/1px 8px no-repeat;pointer-events:none}
+.mplace.relief{border-bottom:0;text-decoration:underline;text-decoration-color:var(--warn);text-underline-offset:3px}
+.mdrone{width:0;height:0;border-left:8px solid transparent;border-right:8px solid transparent;border-bottom:20px solid var(--acc);filter:drop-shadow(0 0 1px #000) drop-shadow(0 0 1px #000)}
+.maplibregl-popup-content{background:var(--bg);color:var(--ink);border:1px solid var(--rule);border-radius:0;padding:10px 12px;font:400 12px var(--sans);box-shadow:none}
+.maplibregl-popup-content dl{display:grid;grid-template-columns:1fr auto;gap:3px 14px;margin:7px 0 9px}
+.maplibregl-popup-content dt{color:var(--mute)} .maplibregl-popup-content dd{margin:0;text-align:right;font-family:var(--mono)}
+.maplibregl-popup-tip{display:none}
+.maplibregl-ctrl-group{border-radius:0;box-shadow:none;border:1px solid var(--rule)}
+body.map2d .maplibregl-ctrl-top-right{top:14px;right:14px}
+body.map2d .maplibregl-ctrl-bottom-right{bottom:calc(var(--console-h) + 10px)}
+
+/* guided tour */
+#caption{position:fixed;left:50%;bottom:calc(var(--console-h) + 34px);transform:translateX(-50%);z-index:6;max-width:min(880px,92vw);padding:12px 20px;background:rgba(0,0,0,.72);color:#fff;font:400 21px/1.35 var(--sans);text-align:center;opacity:0;pointer-events:none}
+#caption.on{opacity:1;transition:opacity .5s}
+#caption b{font-weight:700;color:var(--acc)}
+body.tour #help,body.tour #legend,body.tour #probe,body.tour #toast,body.tour .btns{display:none}
+@media (max-width:760px){#caption{font-size:15px;padding:9px 12px;bottom:calc(var(--console-h) + 74px)}}
