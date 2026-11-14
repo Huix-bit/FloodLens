@@ -20,6 +20,7 @@ function renderChips() {
   const per = man.dates.map(d => stats.per_date?.[d.date] || {});
   // 2 km² floor: on a pass with no flood, detector noise must not grow into a full column.
   const peak = Math.max(2, ...per.map(s => (s.open_flood_km2 ?? 0) + (s.veg_flood_km2 ?? 0)));
+  const lo = 6, wd = pending.length ? 76 : 86;      // leave room on the right for a pending pass label
   const el = $('chips');
   el.classList.toggle('dense', n + pending.length > 6);
   el.innerHTML = man.dates.map((d, k) => {
@@ -28,12 +29,12 @@ function renderChips() {
     const tip = d.lband_pending
       ? `${d.date}: no NISAR pass. C-band alone finds ${open.toFixed(1)} km² of open-water flood`
       : `${d.date}: ${(open + veg).toFixed(1)} km² flagged, ${veg.toFixed(1)} km² of it under canopy`;
-    return `<button class="chip ${k === state.dateIdx ? 'on' : ''}" data-k="${k}" style="left:${8 + frac * 84}%" title="${tip}">`
+    return `<button class="chip ${k === state.dateIdx ? 'on' : ''}" data-k="${k}" style="left:${lo + frac * wd}%" title="${tip}">`
       + `<span class="col"><i class="veg" style="height:${veg / peak * 100}%"></i><i class="open" style="height:${open / peak * 100}%"></i></span>`
       + `<span class="tick"></span><b>${dated ? dayOf(times[k]) : d.date}</b>`
       + `<small>${k < 9 ? `${k + 1} · ` : ''}${d.label}</small></button>`;
   }).join('') + (dated && span > 0 ? pending.map(p =>
-    `<span class="chip pending" style="left:${8 + (p.t - t0) / span * 84}%" title="${String(p.note || '').replace(/"/g, '&quot;')}">`
+    `<span class="chip pending" style="left:${lo + (p.t - t0) / span * wd}%" title="${String(p.note || '').replace(/"/g, '&quot;')}">`
     + `<span class="col"></span><span class="tick"></span><b>${dayOf(p.t)}</b><small>NISAR pass, awaiting NASA</small></span>`).join('') : '');
   if (dated) {
     const year = t => new Date(t).getUTCFullYear(), last = t0 + span;

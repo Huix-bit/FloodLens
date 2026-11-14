@@ -185,49 +185,8 @@ body.present .btns{display:none}
 .tagn.nasa{color:#06221d;background:var(--l)}
 .tagn.simd{color:var(--bg);background:var(--warn)}
 
-/* ---------- responsive ---------- */
-@media (max-width:1320px){ #console{grid-template-columns:290px minmax(300px,1fr) 208px} #legend{display:none} }
-@media (max-width:1040px){ #console{grid-template-columns:270px minmax(280px,1fr)} #pass,#help{display:none} .seg{min-width:0;padding:6px 12px} }
-/* compact: phones in either orientation */
-@media (max-width:760px),(max-height:520px){
-  :root{--console-h:118px}
-  #tape,#spark,#sparkCap,#caseTitle,#modeSub,.seg small,.tlkey,#help,#pass,#legend,#stats,.step{display:none}
-  #console{grid-template-columns:1fr}
-  #ident{width:auto;max-width:232px;padding:8px 10px}
-  .mark{font-size:15px}
-  .stamp{font-size:9.5px}
-  .btns{margin-top:7px}
-  #mini{width:104px;height:104px}
-  #sensor{top:10px}
-  .seg{min-width:0;padding:7px 12px}
-  .seg b{font-size:13px}
-  .seg:first-child{border-left:0}
-  #osdAlt{left:auto;right:14px;top:150px;transform:none}
-  #probe{max-width:94vw;white-space:normal;font-size:10px}
-  #chips{height:84px}
-  .chip{width:84px;margin-left:-42px}
-  .chip .col{height:30px}
-  #chips::before{top:34px}
-  #pad{bottom:calc(var(--console-h) + 12px)}
-}
-/* narrow: portrait phones put the sensor selector within thumb reach */
-@media (max-width:760px){
-  #ident{max-width:calc(100vw - 150px)}
-  #sensor{top:auto;bottom:calc(var(--console-h) + 12px);left:14px;right:14px;transform:none}
-  .selector{display:flex}
-  #seg{flex:1}
-  .seg{flex:1;text-align:center;padding:10px 4px}
-  #pad{bottom:calc(var(--console-h) + 68px)}
-  #toast{top:auto;bottom:calc(var(--console-h) + 130px)}
-  #start .card{padding:0 22px}
-  #start h1{font-size:38px}
-  .eye{grid-template-columns:1fr}
-}
 code{font:400 .92em var(--mono);background:var(--bg2);padding:0 4px}
 #sparkCap .cb{margin-left:8px}
-@media (max-height:520px){ #readout{display:none} #probe{top:calc(50% + 28px)} }
-body.present #help,body.present #legend{display:none}
-body.present #console{grid-template-columns:300px minmax(320px,1fr) 208px}
 
 /* real-data states */
 #modeSub.warn{color:var(--warn);border-left:1px solid var(--rule);margin:-1px 0 0;max-width:min(560px,92vw);line-height:1.4;white-space:normal}
@@ -290,3 +249,105 @@ body.tour #help,body.tour #legend,body.tour #probe,body.tour #toast,body.tour .b
 @media (max-width:760px){#caption{font-size:15px;padding:9px 12px;bottom:calc(var(--console-h) + 74px)}}
 #mapUnder{position:absolute;left:0;top:0;transform-origin:0 0;image-rendering:pixelated;pointer-events:none}
 #map2d .maplibregl-canvas-container{position:absolute;inset:0}
+
+/* ====================================================================================
+   Flight view (default): the scene takes the screen. One slim bar, a small map, nothing else.
+   Everything hidden here is one key away (H controls, V or Shift probe, P full instruments).
+   ==================================================================================== */
+:root{--console-h:92px}
+#tape,#xhair,#probe,#panel{display:none}
+body.full #tape,body.full #xhair,body.full #probe,body.probe #xhair,body.probe #probe,body.peek #xhair,body.peek #probe{display:block}
+body.full #panel,body.help #panel{display:block}
+body.clean #reveal,body.clean #caption{display:none}
+
+#ident{position:fixed;top:12px;left:14px;width:auto;padding:0;pointer-events:none;color:#fff;
+  text-shadow:1px 0 #000,-1px 0 #000,0 1px #000,0 -1px #000,0 0 6px #000}
+.mark{font:700 15px/1 var(--sans)}
+#caseTitle{font:400 11px var(--mono);color:#fff;margin:0 0 0 8px}
+#panel{top:38px;left:14px;width:270px;padding:12px 14px 11px}
+#panel .btns{margin-top:0}
+#help{margin:10px 0 0}
+#hint{position:fixed;left:14px;bottom:calc(var(--console-h) + 10px);padding:3px 8px 4px;border:0;background:rgba(0,0,0,.55);color:#fff;font:400 11px var(--mono);cursor:pointer}
+#hint kbd{margin-right:5px}
+body.tour #hint,body.tour #panel{display:none}
+
+#miniWrap{top:12px;right:12px;padding:5px}
+#mini{width:132px;height:132px}
+#miniInfo{gap:8px;margin-top:5px;font-size:10px;white-space:nowrap}
+#miniInfo b{color:var(--ink);font-weight:700}
+#miniInfo .scale{display:none}
+
+#toast{top:44px;bottom:auto}
+
+/* the bar: three numbers that are also the sensor selector, one status line, a compact timeline */
+#console{grid-template-columns:auto minmax(0,1fr);min-height:var(--console-h)}
+#console section{padding:9px 16px 8px}
+#stats{display:flex;flex-direction:column;justify-content:center}
+#seg{display:flex}
+.seg{display:block;min-width:132px;padding:4px 14px 3px;border:0;border-left:1px solid var(--rule);background:none;color:var(--mute);text-align:left;cursor:pointer}
+.seg:first-child{border-left:0}
+.seg small{display:block;font:700 11px/1.3 var(--sans)}
+.seg span{display:flex;align-items:baseline;gap:5px}
+.seg b{display:inline;font:700 30px/1.05 var(--mono);color:var(--ink)}
+.seg i{font:400 11px var(--mono);font-style:normal}
+.seg.on{background:var(--k);color:#0c1114}
+.seg.on b{color:#0c1114}
+#note{margin:6px 0 0 14px;max-width:560px;font-size:11.5px;line-height:1.3;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#note.warn{color:var(--warn);white-space:normal}
+
+#timeline{position:relative}
+#play{position:absolute;top:7px;right:14px;z-index:1}
+#chips{height:72px}
+#chips::before{top:28px}
+.chip{width:84px;margin-left:-42px}
+.chip .col{width:22px;height:24px}
+.chip small{display:none}
+.chip.pending{width:96px}
+.chip.pending small{display:block;font-size:9.5px}
+#chips.dense .chip.pending{width:96px}
+
+/* pass facts and key now live in the Exposure sheet */
+.passgrid{display:grid;grid-template-columns:1fr 1fr;gap:0 26px;margin:0 0 14px;padding-bottom:14px;border-bottom:1px solid var(--rule)}
+.modal #legend .i{white-space:normal}
+
+/* the reveal caption */
+#reveal{position:fixed;left:50%;top:36%;transform:translate(-50%,-50%);z-index:6;text-align:center;pointer-events:none;opacity:0;color:#fff;
+  text-shadow:2px 0 #000,-2px 0 #000,0 2px #000,0 -2px #000,0 0 14px #000}
+#reveal.on{animation:reveal 2.3s ease-out forwards}
+@keyframes reveal{0%{opacity:0;transform:translate(-50%,-42%)}12%{opacity:1;transform:translate(-50%,-50%)}72%{opacity:1}100%{opacity:0;transform:translate(-50%,-50%)}}
+#reveal b{display:block;font:700 68px/1 var(--mono);color:var(--l);white-space:nowrap}
+#reveal span{display:block;margin-top:8px;font:700 24px/1.2 var(--sans)}
+@media (prefers-reduced-motion:reduce){#reveal.on{animation-duration:3s}}
+
+/* ---------- small screens ---------- */
+@media (max-width:1000px){ .seg{min-width:104px;padding:4px 10px 3px} .seg b{font-size:25px} #note{max-width:330px} }
+@media (max-width:760px){
+  :root{--console-h:158px}
+  #console{grid-template-columns:1fr}
+  #console section{padding:7px 10px 5px}
+  #timeline{border-left:0;border-top:1px solid var(--rule)}
+  .seg{flex:1;min-width:0;padding:4px 8px 3px}
+  .seg b{font-size:24px}
+  #note{margin-left:8px;max-width:none;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+  #chips{height:58px} #chips::before{top:22px}
+  .chip{width:60px;margin-left:-30px} .chip .col{height:18px;width:16px} .chip b{font-size:10.5px}
+  #play{top:3px;right:8px;font-size:10px}
+  #mini{width:88px;height:88px} #miniInfo span:last-child{display:none}
+  #caseTitle{display:block;margin:3px 0 0;max-width:calc(100vw - 130px)}
+  #panel{width:auto;right:14px;top:50px} #help{font-size:11px}
+  #reveal b{font-size:40px} #reveal span{font-size:17px}
+  #pad{bottom:calc(var(--console-h) + 10px)}
+  #start .card{padding:0 22px} #start h1{font-size:38px}
+  .eye{grid-template-columns:1fr} .passgrid{grid-template-columns:1fr}
+  #probe{max-width:94vw;white-space:normal;font-size:10px}
+}
+@media (max-height:520px) and (min-width:761px){
+  :root{--console-h:74px}
+  #note{display:none} .seg b{font-size:22px} .seg{min-width:96px}
+  #chips{height:56px} #chips::before{top:22px} .chip .col{height:18px}
+  #mini{width:92px;height:92px}
+}
+body.map2d #tape,body.map2d #xhair,body.map2d #probe,body.tour #probe,body.tour #xhair,body.tour #tape{display:none}
+.seg b,#reveal b{font-family:var(--sans);font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+@media (max-width:760px){ #play{display:none} }
+#play{right:auto;left:14px;top:5px;font-size:10.5px}

@@ -17,25 +17,35 @@ void main() {
 }`;
 
 const FRAG = /* glsl */`
-uniform sampler2D tImgA, tImgB, tLensA, tLensB, tMaskA, tMaskB, tNormal;
-uniform float uT, uMode, uLensMode, uLens, uLensR, uDetect, uTime, uFogNear, uFogFar;
+uniform sampler2D tImgA, tImgB, tLensA, tLensB, tMaskA, tMaskB, tXA, tXB, tNormal;
+uniform float uT, uMode, uLensMode, uLens, uLensR, uDetect, uTime, uFogNear, uFogFar, uReveal, uMiss;
 uniform vec2 uRes;
 uniform vec3 uFogColor, uOpen, uVeg;
 varying vec2 vUv;
 varying vec3 vWorld;
 
 // mask channels: r open-water flood, g flooded vegetation, b permanent water, a no data
-vec3 look(float mode, vec3 img, vec4 m, float light) {
+// x channels:    r open-water flood found by C-band, g flagged by L-band but not by C-band
+vec3 look(float mode, vec3 img, vec4 m, vec4 x, float light) {
+  vec2 p = vWorld.xz * 0.35;                         // illustrative water shimmer / sheen
+  float rip = sin(p.x + uTime * 1.4 + sin(p.y * 0.7)) * sin(p.y * 1.3 - uTime * 1.1);
   if (mode < 0.5) {
     vec3 col = img * mix(1.0, light, 0.35);
-    vec2 p = vWorld.xz * 0.35;                       // illustrative water shimmer
-    float rip = sin(p.x + uTime * 1.4 + sin(p.y * 0.7)) * sin(p.y * 1.3 - uTime * 1.1);
     return col + max(m.r, m.b) * 0.03 * rip;
   }
   vec3 col = vec3(img.r) * mix(1.0, light, 0.2);
   if (uDetect > 0.5) {
-    col = mix(col, uOpen, 0.66 * m.r);
-    if (mode > 1.5) col = mix(col, uVeg * (0.84 + 0.16 * sin(uTime * 2.2)), 0.74 * m.g);
+    vec3 water = uOpen * (1.0 + 0.16 * rip) + 0.05 * rip;
+    if (mode > 1.5) {
+      col = mix(col, water, 0.9 * m.r);
+      col = mix(col, uVeg * (0.86 + 0.14 * sin(uTime * 2.2)), 0.88 * m.g);
+      // the pixels only L-band finds flash when you arrive from C-band
+      col = mix(col, vec3(0.80, 1.0, 0.96), x.g * uReveal * (0.55 + 0.45 * sin(uTime * 13.0)));
+    } else {
+      col = mix(col, water, 0.9 * x.r);
+      // ... and drain out of C-band's picture when you swing back
+      col = mix(col, water, 0.75 * x.g * uMiss * (1.0 - x.r));
+    }
   }
   float hatch = step(0.5, fract((vWorld.x + vWorld.z) * 0.08));
   return mix(col, mix(vec3(0.05, 0.01, 0.04), vec3(0.22, 0.03, 0.14), hatch), m.a);
@@ -45,11 +55,12 @@ void main() {
   vec4 m = mix(texture2D(tMaskA, vUv), texture2D(tMaskB, vUv), uT);
   vec3 n = normalize(texture2D(tNormal, vUv).xyz * 2.0 - 1.0);
   float light = clamp(dot(n, vec3(-0.5, 0.74, -0.45)) / 0.74, 0.35, 1.5);
-  vec3 col = look(uMode, mix(texture2D(tImgA, vUv), texture2D(tImgB, vUv), uT).rgb, m, light);
+  vec4 x = mix(texture2D(tXA, vUv), texture2D(tXB, vUv), uT);
+  vec3 col = look(uMode, mix(texture2D(tImgA, vUv), texture2D(tImgB, vUv), uT).rgb, m, x, light);
   if (uLens > 0.5) {
     float d = length(gl_FragCoord.xy - uRes * 0.5);
     if (d < uLensR) {
-      col = look(uLensMode, mix(texture2D(tLensA, vUv), texture2D(tLensB, vUv), uT).rgb, m, light);
+      col = look(uLensMode, mix(texture2D(tLensA, vUv), texture2D(tLensB, vUv), uT).rgb, m, x, light);
       col *= 1.0 - 0.35 * smoothstep(uLensR * 0.8, uLensR, d);
     }
   }
@@ -112,6 +123,21 @@ function maskTexture(flood, w, h) {
   return t;
 }
 
+/** r = C-band's own open-water flood, g = flagged by L-band but not by C-band. Without a C-band
+ *  mask (older data sets) C-band mode falls back to the open-water class and nothing is "L-only". */
+function compareTexture(flood, cflood, w, h) {
+  const px = new Uint8Array(w * h * 4);
+  for (let i = 0, j = 0; i < flood.length; i++, j += 4) {
+    const c = flood[i], wet = c === FLOOD.OPEN || c === FLOOD.VEG;
+    if (cflood) { if (cflood[i]) px[j] = 255; else if (wet) px[j + 1] = 255; }
+    else if (c === FLOOD.OPEN) px[j] = 255;
+  }
+  const t = new THREE.DataTexture(px, w, h, THREE.RGBAFormat);
+  t.magFilter = THREE.LinearFilter; t.minFilter = THREE.LinearMipmapLinearFilter;
+  t.generateMipmaps = true; t.needsUpdate = true;
+  return t;
+}
+
 function normalTexture(dem, w, h, pixelM) {
   const px = new Uint8Array(w * h * 4);
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
@@ -161,7 +187,8 @@ export function createTerrain({ man, geo, dem, quality, maxAniso }) {
 
   const U = {
     tImgA: { value: null }, tImgB: { value: null }, tLensA: { value: null }, tLensB: { value: null },
-    tMaskA: { value: null }, tMaskB: { value: null }, tNormal: { value: normalTexture(dem, w, h, man.grid.pixel_m) },
+    tMaskA: { value: null }, tMaskB: { value: null }, tXA: { value: null }, tXB: { value: null },
+    uReveal: { value: 0 }, uMiss: { value: 0 }, tNormal: { value: normalTexture(dem, w, h, man.grid.pixel_m) },
     uT: { value: 1 }, uMode: { value: 0 }, uLensMode: { value: 2 }, uLens: { value: 0 }, uLensR: { value: 200 },
     uDetect: { value: 1 }, uTime: { value: 0 }, uFogNear: { value: 1000 }, uFogFar: { value: 6000 },
     uRes: { value: new THREE.Vector2(1, 1) }, uFogColor: { value: new THREE.Color() },
@@ -194,7 +221,7 @@ export function createTerrain({ man, geo, dem, quality, maxAniso }) {
       const surfPx = waterSurface(dem, data.flood, w, h), surf = new Float32Array(NV);
       for (let k = 0; k < NV; k++) surf[k] = geo.yOf(surfPx[pix[k]]);
       dates[i] = {
-        surf, mask: maskTexture(data.flood, w, h),
+        surf, mask: maskTexture(data.flood, w, h), cmp: compareTexture(data.flood, data.cflood, w, h),
         tex: { optical: imageTexture(data.optical, aniso), cband: imageTexture(data.cband, aniso), lband: imageTexture(data.lband, aniso) },
       };
     },
@@ -202,6 +229,7 @@ export function createTerrain({ man, geo, dem, quality, maxAniso }) {
       from = a; to = b;
       hA.array.set(dates[a].surf); hB.array.set(dates[b].surf); hA.needsUpdate = hB.needsUpdate = true;
       U.tMaskA.value = dates[a].mask; U.tMaskB.value = dates[b].mask;
+      U.tXA.value = dates[a].cmp; U.tXB.value = dates[b].cmp;
       const sa = dates[a].surf, sb = dates[b].surf;
       for (let k = 0; k < NV; k++) collide[k] = Math.max(sa[k], sb[k]);
       bindImages();

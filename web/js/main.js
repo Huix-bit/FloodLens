@@ -19,6 +19,7 @@ import { closeModals, initModals, openModal } from './modals.js';
 import { initReport } from './report.js';
 import { getMap, initMap2d, mapFlyTo, toggleMap } from './map2d.js';
 import { initTour, toggleTour, updateTour } from './tour.js';
+import { initReveal, updateReveal } from './reveal.js';
 
 const status = msg => { $('loadMsg').textContent = msg; };
 
@@ -49,6 +50,16 @@ function homePose(geo, terrain, hexes, places, date, named) {
   return {
     pos: new THREE.Vector3(x, terrain.groundAt(x, z) + 115, z),
     yaw: Math.atan2(-(target[0] - x), -(target[1] - z)), pitch: -0.3,
+  };
+}
+
+/** Opening shot given by the case: camera above `from`, looking at `target`, both lon/lat. */
+function viewPose(geo, terrain, hv) {
+  const [fx, fz] = geo.lonLatToWorld(...hv.from), [tx, tz] = geo.lonLatToWorld(...hv.target);
+  const y = terrain.groundAt(fx, fz) + (hv.height_m || 600) / UNIT_M * V_EXAG;
+  return {
+    pos: new THREE.Vector3(fx, y, fz), yaw: Math.atan2(-(tx - fx), -(tz - fz)),
+    pitch: Math.atan2(terrain.groundAt(tx, tz) - y, Math.hypot(tx - fx, tz - fz)),
   };
 }
 
@@ -128,7 +139,7 @@ async function boot() {
   const vegetation = createVegetation(ctx);
   createBuildings(ctx);
 
-  state.home = homePose(geo, terrain, stat.hexes, stat.places, man.dates[peakDate(man, stat.stats)].date, man.home_lonlat);
+  state.home = man.home_view?.from && man.home_view?.target ? viewPose(geo, terrain, man.home_view) : homePose(geo, terrain, stat.hexes, stat.places, man.dates[peakDate(man, stat.stats)].date, man.home_lonlat);
   applyPose(hash.pose || state.home);
 
   const setLens = onOff => {
@@ -157,10 +168,10 @@ async function boot() {
   on('mode', m => { terrain.setMode(m); if (state.lens) setLens(true); });
   ctx.hexes = stat.hexes;
   initHud(ctx, { swingTo }); initTimeline(ctx); initModals(man);
-  initReport(ctx, actions); initMap2d(ctx, actions); initTour(ctx, actions);
+  initReport(ctx, actions); initMap2d(ctx, actions); initTour(ctx, actions); initReveal(ctx);
   const updateControls = initControls({ canvas, geo, terrain, actions });
   const drawMini = initMinimap(ctx), updateProbe = initProbe(ctx), updateLabels = initLabels(ctx);
-  setMode(hash.mode ?? 0);
+  setMode(hash.mode ?? (Number.isInteger(man.default_mode) ? man.default_mode : 0));
 
   function resize() {
     renderer.setSize(innerWidth, innerHeight);
@@ -176,6 +187,7 @@ async function boot() {
     const dt = Math.min(0.05, (now - last) / 1000); last = now; time += dt;
     const bob = updateControls(dt);
     updateTour(dt);
+    updateReveal(dt);
     updateTimeline(dt);
     const sw = updateSwing(dt);
     camera.position.set(state.pos.x, state.pos.y + bob.y, state.pos.z);
@@ -196,7 +208,7 @@ async function boot() {
   go.disabled = false; go.textContent = 'Start flight'; status('');
   go.addEventListener('click', () => {
     $('start').hidden = true; state.started = true; document.body.classList.add('started');
-    toast('Swing right with E, or flick, to see through the cloud');
+    toast(state.mode === 1 ? 'Press E, or flick sideways, to swing to NISAR L-band' : 'Press E, or flick sideways, to swing to the next satellite');
   });
 
   // Remaining passes load in the background so the first frame is never held up.

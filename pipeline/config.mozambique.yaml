@@ -30,6 +30,10 @@ dates:
 
 home: { lon: 32.99, lat: -24.53 }
 default_date: "2026-01-17"
+# Opening shot: from the south-west, high and oblique, with Chokwe town in front and the
+# flooded Limpopo plain behind it.
+home_view: { from: [32.972, -24.558], target: [33.016, -24.514], height_m: 2200 }
+default_mode: 1   # open in C-band, so the first swing (E) is the step to L-band
 
 event:
   name: "Southern Mozambique floods"

@@ -64,8 +64,10 @@ writes its own folder under `web/data/` and registers itself in `web/data/cases.
 | `1`–`9`, mouse wheel, timeline chips, `L` | Jump between satellite passes, play the timeline |
 | `X` | Lens: a circle around the crosshair shows another sensor (NISAR, or optical when already in NISAR) |
 | `T` | Flood-detection overlay on / off (shows the raw backscatter) |
-| `H` | Back to the start view |
-| `P` | Presentation view → clean view (no HUD) → full HUD, for recording |
+| `0` or `Home` | Back to the start view |
+| `H` | Show or hide the controls panel (hidden by default) |
+| `V`, or hold `Shift` | Crosshair probe: coordinates, land cover, backscatter, pass-by-pass chart |
+| `P` | Flight view (default) → full instruments (compass, probe, controls) → scene only |
 | `I`, `O` | "How it works" explainer, data sources |
 | `K` | Flood exposure ranking: ranked 1 km hexagons, CSV / GeoJSON download, copyable summary |
 | `M` | 2D map (MapLibre): same sensor image and flood classes, ranking hexagons, click for details |
@@ -73,6 +75,12 @@ writes its own folder under `web/data/` and registers itself in `web/data/cases.
 | Click the minimap | Jump there |
 
 The URL hash stores camera, sensor and date, so any view can be bookmarked and reopened.
+
+The default flight view shows only the scene, a small map and one bar: the flood area each sensor
+flags on the current pass (the three numbers are also the sensor selector) and the timeline.
+Swinging from C-band to L-band flashes the pixels that only L-band flags and names their area;
+both sets of pixels come from the data (`flood_<date>.png` and the optional `cflood_<date>.png`,
+what C-band itself flagged).
 
 ## What is on screen, and what is not data
 

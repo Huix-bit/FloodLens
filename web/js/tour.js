@@ -55,6 +55,7 @@ export function toggleTour() {
   actions.closeModals();
   actions.goHome({ quiet: true });
   run = { t: 0, next: 0, steps: script(), yaw0: state.yaw };
+  document.body.classList.remove('help');
   document.body.classList.add('tour');
   return true;
 }

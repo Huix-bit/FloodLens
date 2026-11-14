@@ -36,6 +36,7 @@
       "nisar_granule": "NISAR_L2_PR_GCOV_031_112_A_003_4005_DHDH_A_20260925T225025_20260925T225059_P05023_N_F_J_001",
       "nisar_time_utc": "2026-09-25T22:50Z",
       "nisar_collection": "NISAR_L2_GCOV_PROVISIONAL_V1",
+      "cband_flood": "cflood_2026-09-25.png",
       "cband_acquired": "2026-09-21T22:55Z",
       "cband_offset_days": -4.0,
       "cband_track": "T091",
@@ -57,6 +58,7 @@
       "nisar_granule": "NISAR_L2_PR_GCOV_032_112_A_003_4005_DHDH_A_20261007T225025_20261007T225059_P05023_N_F_J_001",
       "nisar_time_utc": "2026-10-07T22:50Z",
       "nisar_collection": "NISAR_L2_GCOV_PROVISIONAL_V1",
+      "cband_flood": "cflood_2026-10-07.png",
       "cband_acquired": "2026-10-03T22:55Z",
       "cband_offset_days": -4.0,
       "cband_track": "T091",
@@ -78,6 +80,7 @@
       "nisar_granule": "NISAR_L2_PR_GCOV_033_112_A_003_4005_DHDH_A_20261019T225025_20261019T225059_P05023_N_F_J_001",
       "nisar_time_utc": "2026-10-19T22:50Z",
       "nisar_collection": "NISAR_L2_GCOV_PROVISIONAL_V1",
+      "cband_flood": "cflood_2026-10-19.png",
       "cband_acquired": "2026-10-15T22:55Z",
       "cband_offset_days": -4.0,
       "cband_track": "T091",
@@ -99,6 +102,7 @@
       "nisar_granule": "NISAR_L2_PR_GCOV_034_112_A_003_4005_DHDH_A_20261031T225025_20261031T225100_P05036_N_F_J_001",
       "nisar_time_utc": "2026-10-31T22:50Z",
       "nisar_collection": "NISAR_L2_GCOV_V1",
+      "cband_flood": "cflood_2026-10-31.png",
       "cband_acquired": "2026-10-27T22:55Z",
       "cband_offset_days": -4.0,
       "cband_track": "T091",
@@ -119,6 +123,7 @@
       "flood_source": "cband",
       "lband_pending": true,
       "lband_from": "2026-10-31",
+      "cband_flood": "cflood_2026-11-07.png",
       "cband_acquired": "2026-11-07T11:33Z",
       "cband_offset_days": 0.0,
       "cband_track": "T070",
@@ -234,6 +239,18 @@
     3.271
   ],
   "default_date": "2026-11-07",
+  "home_view": {
+    "from": [
+      101.328,
+      3.248
+    ],
+    "target": [
+      101.356,
+      3.276
+    ],
+    "height_m": 1000
+  },
+  "default_mode": 1,
   "event": {
     "name": "Kuala Selangor floods",
     "reported": [
@@ -323,5 +340,5 @@
     "permanent_water_km2": 46.56,
     "landcover": "Tree cover is labelled 'oil palm / tree crop' unless it lies inside an OpenStreetMap forest, wood, wetland or protected-area polygon (then 'forest'); mangrove = forest."
   },
-  "generated_utc": "2026-11-14T08:38Z"
+  "generated_utc": "2026-11-14T12:37Z"
 }

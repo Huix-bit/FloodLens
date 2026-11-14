@@ -88,12 +88,16 @@ export async function loadStatic(onProgress = () => {}) {
 export function loadDate(i) {
   if (!dateCache.has(i)) {
     const d = manifest.dates[i];
-    const p = Promise.all([fetchBitmap(d.optical), fetchBitmap(d.cband), fetchBitmap(d.lband), fetchBitmap(d.flood)])
-      .then(([optical, cband, lband, floodBmp]) => {
+    // cband_flood (what C-band itself flagged) is an optional extension of the contract
+    const cf = d.cband_flood ? fetchBitmap(d.cband_flood).catch(() => null) : Promise.resolve(null);
+    const p = Promise.all([fetchBitmap(d.optical), fetchBitmap(d.cband), fetchBitmap(d.lband), fetchBitmap(d.flood), cf])
+      .then(([optical, cband, lband, floodBmp, cfBmp]) => {
         checkGrid(floodBmp, d.flood);
         const flood = redChannel(floodBmp);
         floodBmp.close();
-        const data = { optical, cband, lband, flood, cbandR: redChannel(cband), lbandR: redChannel(lband) };
+        const cflood = cfBmp ? redChannel(cfBmp) : null;
+        cfBmp?.close();
+        const data = { optical, cband, lband, flood, cflood, cbandR: redChannel(cband), lbandR: redChannel(lband) };
         loaded.set(i, data);
         return data;
       });

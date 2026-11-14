@@ -17,13 +17,13 @@ export function initMinimap({ man, geo, places }) {
     return { u: (x + geo.W / 2) / geo.W, v: (z + geo.H / 2) / geo.H, name: f.properties.name, town: f.properties.place === 'town' };
   });
 
-  function paintOverlay(flood) {
+  function paintOverlay(flood, cflood) {
     const d = img.data, { width: w, height: h } = man.grid, lband = state.mode === 2;
     for (let y = 0, j = 0; y < SIZE; y++) {
       const row = Math.min(h - 1, (y + 0.5) / SIZE * h | 0) * w;
       for (let x = 0; x < SIZE; x++, j += 4) {
-        const c = flood[row + Math.min(w - 1, (x + 0.5) / SIZE * w | 0)];
-        if (c === FLOOD.OPEN) { d[j] = 43; d[j + 1] = 112; d[j + 2] = 255; d[j + 3] = 200; }
+        const k = row + Math.min(w - 1, (x + 0.5) / SIZE * w | 0), c = flood[k];
+        if (lband || !cflood ? c === FLOOD.OPEN : cflood[k]) { d[j] = 43; d[j + 1] = 112; d[j + 2] = 255; d[j + 3] = 200; }
         else if (c === FLOOD.VEG && lband) { d[j] = 0; d[j + 1] = 255; d[j + 2] = 208; d[j + 3] = 215; }
         else d[j + 3] = 0;
       }
@@ -36,7 +36,7 @@ export function initMinimap({ man, geo, places }) {
     if (!data) return;
     bctx.imageSmoothingEnabled = true;
     bctx.drawImage(data[MODES[state.mode].key], 0, 0, SIZE, SIZE);
-    if (state.mode > 0 && state.detect) { paintOverlay(data.flood); bctx.drawImage(over, 0, 0); }
+    if (state.mode > 0 && state.detect) { paintOverlay(data.flood, data.cflood); bctx.drawImage(over, 0, 0); }
   }
   on('mode', repaint); on('date', repaint); on('detect', repaint);
   repaint();

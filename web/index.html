@@ -28,7 +28,6 @@
 </svg>
 <div id="map2d"></div>
 <div id="caption" class="osd"></div>
-<div id="osdAlt" class="hud osd">ALT <b id="alt">0</b> m</div>
 <div id="probe" class="hud osd">
   <div id="readout"></div>
   <div id="target"></div>
@@ -36,58 +35,49 @@
   <div id="sparkCap">backscatter here, pass by pass · <span class="l">L-band</span> <span class="cb">C-band</span></div>
 </div>
 
-<header id="ident" class="hud sheet">
-  <div class="mark">FloodLens</div>
-  <div id="caseTitle"></div>
-  <div id="simBadge" class="stamp" hidden>Simulated data, not real measurements</div>
+<header id="ident" class="hud">
+  <span class="mark">FloodLens</span>
+  <span id="caseTitle"></span>
+  <span id="simBadge" class="stamp" hidden>Simulated data, not real measurements</span>
+</header>
+
+<!-- Controls and links: hidden until H -->
+<aside id="panel" class="hud sheet">
   <nav class="btns">
     <button id="btnHow" class="link">How it works <kbd>I</kbd></button>
     <button id="btnSrc" class="link">Data sources <kbd>O</kbd></button>
-    <button id="btnRank" class="link">Exposure ranking <kbd>K</kbd></button>
+    <button id="btnRank" class="link">Exposure and pass details <kbd>K</kbd></button>
     <button id="btnMap" class="link">2D map <kbd>M</kbd></button>
     <button id="btnTour" class="link">Tour <kbd>G</kbd></button>
   </nav>
-  <dl id="help" class="aux">
+  <dl id="help">
     <dt><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></dt><dd>fly · drag to look</dd>
-    <dt><kbd>R</kbd><kbd>F</kbd> <kbd>Shift</kbd></dt><dd>up, down · boost</dd>
+    <dt><kbd>R</kbd><kbd>F</kbd></dt><dd>up, down</dd>
     <dt><kbd>Q</kbd><kbd>E</kbd></dt><dd>swing sensor (or flick)</dd>
     <dt><kbd>1</kbd>–<kbd>9</kbd> <kbd>L</kbd></dt><dd>change pass · play</dd>
+    <dt><kbd>Shift</kbd> <kbd>V</kbd></dt><dd>boost and peek at the probe · keep the probe on</dd>
     <dt><kbd>X</kbd> <kbd>T</kbd></dt><dd>lens · flood overlay</dd>
-    <dt><kbd>H</kbd> <kbd>P</kbd></dt><dd>home · presentation view</dd>
+    <dt><kbd>0</kbd> <kbd>P</kbd></dt><dd>start view · more or fewer instruments</dd>
   </dl>
-</header>
-
-<div id="sensor" class="hud">
-  <div class="selector">
-    <button id="bQ" class="step" title="Swing left (Q)"><kbd>Q</kbd></button>
-    <div id="seg" role="tablist" aria-label="Sensor"></div>
-    <button id="bE" class="step" title="Swing right (E)"><kbd>E</kbd></button>
-  </div>
-  <div id="modeSub"></div>
-</div>
+</aside>
+<button id="hint" class="hud" aria-expanded="false"><kbd>H</kbd> controls</button>
+<div id="reveal"></div>
 
 <aside id="miniWrap" class="hud sheet">
   <canvas id="mini" width="340" height="340" title="Click to jump there"></canvas>
-  <div id="miniInfo"><span class="scale"><i id="scaleBar"></i><em id="scaleLbl"></em></span><span class="north">N ↑</span></div>
+  <div id="miniInfo"><span class="scale"><i id="scaleBar"></i><em id="scaleLbl"></em></span><span>ALT <b id="alt">0</b> m</span><span><b id="hdg">000</b>°</span></div>
 </aside>
 
 <footer id="console" class="hud">
   <section id="stats">
-    <h4>Flood area detected</h4>
-    <div id="rows"></div>
+    <div id="seg" role="tablist" aria-label="Flood area flagged by each sensor. Select one to swing to it."></div>
     <div id="note"></div>
   </section>
   <section id="timeline">
-    <h4><span id="tlTitle">Satellite passes</span>
-      <span class="tlkey"><i class="sw open"></i>open water <i class="sw veg"></i>under canopy</span>
-      <button id="play" class="link" title="Play or pause the timeline (L)">Play</button></h4>
+    <span id="tlTitle" hidden></span>
+    <button id="play" class="link" title="Play or pause the timeline (L)">Play</button>
     <div id="chips"></div>
   </section>
-  <section id="pass">
-    <h4>This pass</h4>
-    <div id="passKv"></div>
-  </section>
-  <section id="legend" class="aux"></section>
 </footer>
 
 <div id="pad" class="hud"><button id="bF" title="Hold to fly forward">Fly ▲</button></div>
@@ -129,6 +119,10 @@
   <div class="card">
     <button class="x" data-close aria-label="Close">Close <kbd>Esc</kbd></button>
     <h2>Flood exposure ranking</h2>
+    <div class="passgrid">
+      <section id="pass"><h4>This pass</h4><div id="passKv"></div></section>
+      <section id="legend"></section>
+    </div>
     <div id="rankBody"></div>
   </div>
 </div>

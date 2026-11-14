@@ -1,6 +1,7 @@
 // FPV flight: keyboard, drag-to-look, flick-to-swing, wheel-to-date, on-screen pad.
 import { $, clamp, emit, state } from './state.js';
 import { swing } from './swing.js';
+import { toggleHelp, toggleProbe } from './hud.js';
 
 const SPEED = 220, BOOST = 560, MAX_ALT = 1400, CLEARANCE = 3;
 const keys = {};
@@ -12,6 +13,7 @@ export function initControls({ canvas, geo, terrain, actions }) {
     if (e.code === 'Escape') { actions.closeModals(); return; }
     if (!state.started || e.ctrlKey || e.metaKey || e.altKey) return;
     keys[e.code] = true;
+    if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') document.body.classList.add('peek');   // hold Shift: probe
     if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
     if (e.repeat) return;
     const digit = /^(?:Digit|Numpad)([1-9])$/.exec(e.code);
@@ -22,14 +24,19 @@ export function initControls({ canvas, geo, terrain, actions }) {
     else if (e.code === 'KeyX') actions.toggleLens();
     else if (e.code === 'KeyL') actions.togglePlay();
     else if (e.code === 'KeyP') actions.cycleView();
-    else if (e.code === 'KeyH') actions.goHome();
+    else if (e.code === 'KeyH') toggleHelp();
+    else if (e.code === 'KeyV') toggleProbe();
+    else if (e.code === 'Digit0' || e.code === 'Numpad0' || e.code === 'Home') actions.goHome();
     else if (e.code === 'KeyI') actions.openModal('modalHow');
     else if (e.code === 'KeyO') actions.openModal('modalSrc');
     else if (e.code === 'KeyK') actions.openModal('modalRank');
     else if (e.code === 'KeyM') actions.toggleMap();
     else if (e.code === 'KeyG') actions.toggleTour();
   });
-  addEventListener('keyup', e => { keys[e.code] = false; });
+  addEventListener('keyup', e => {
+    keys[e.code] = false;
+    if (!keys.ShiftLeft && !keys.ShiftRight) document.body.classList.remove('peek');
+  });
   addEventListener('blur', () => { for (const k in keys) keys[k] = false; holdForward = false; });
 
   canvas.addEventListener('pointerdown', e => {
@@ -71,8 +78,7 @@ export function initControls({ canvas, geo, terrain, actions }) {
   const fwd = $('bF');
   fwd.addEventListener('pointerdown', e => { e.preventDefault(); holdForward = true; });
   ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => fwd.addEventListener(ev, () => { holdForward = false; }));
-  $('bQ').addEventListener('click', () => swing(-1));
-  $('bE').addEventListener('click', () => swing(1));
+
 
   /** Integrate movement for one frame. Returns head-bob offsets for the camera. */
   return function update(dt) {

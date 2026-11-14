@@ -154,6 +154,11 @@ def main():
             entry["lband_missing"] = True
         save(np.load(work / "flood" / f"flood_{date}.npy").astype(np.uint8), out / f"flood_{date}.png")
 
+        co = work / "flood" / f"cband_open_{date}.npy"
+        if co.exists():
+            # What C-band itself flagged (1 = open-water flood), so the app can show each radar's own result.
+            save(np.load(co).astype(np.uint8), out / f"cflood_{date}.png")
+            entry["cband_flood"] = f"cflood_{date}.png"
         cb = work / "cband" / f"{date}.npy"
         if cb.exists():
             save(stretch(to_db(np.load(cb)), lo_c, hi_c), out / f"cband_{date}.png")
@@ -233,6 +238,8 @@ def main():
         "pending_passes": pending,
         "home_lonlat": [cfg["home"]["lon"], cfg["home"]["lat"]] if cfg.get("home") else None,
         "default_date": cfg.get("default_date"),
+        "home_view": cfg.get("home_view"),
+        "default_mode": cfg.get("default_mode"),
         "event": cfg.get("event"),
         "method": {"reference_dates": detect["reference_dates"], "lband": detect["lband"], "cband": detect["cband"],
                    "optical": detect["optical"], "permanent_water_km2": detect["permanent_water_km2"],

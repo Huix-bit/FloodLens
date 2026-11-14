@@ -51,6 +51,9 @@ event:
 # Where the app opens: above the Bukit Kuching / Parit Mahang relief-centre area.
 home: { lon: 101.352, lat: 3.271 }
 default_date: "2026-11-07"
+# Opening shot: from the south-west towards the relief-centre area, high and oblique.
+home_view: { from: [101.328, 3.248], target: [101.356, 3.276], height_m: 1000 }
+default_mode: 1   # open in C-band, so the first swing (E) is the step to L-band
 
 # Relief centres named in the reports that could be located in OpenStreetMap (shown as labels).
 relief_centres:
