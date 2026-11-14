@@ -19,8 +19,34 @@ function renderMode() {
     el.classList.toggle('on', k === state.mode);
     el.setAttribute('aria-selected', k === state.mode);
   });
-  $('modeSub').textContent = md.sub;
+  renderSub();
   $('scan').classList.toggle('on', state.mode > 0);
+}
+
+const DAY = { day: 'numeric', month: 'short', timeZone: 'UTC' };
+const dayOf = iso => (iso ? new Date(String(iso).slice(0, 10) + 'T00:00:00Z').toLocaleDateString('en-GB', DAY) : '');
+
+/** One-line note under the selector. Says so plainly when the image shown is not from this date. */
+function renderSub() {
+  const md = MODES[state.mode], d = man.dates[state.dateIdx], el = $('modeSub');
+  const missing = [d.optical_missing, d.cband_missing, d.lband_missing][state.mode];
+  let text = md.sub, warn = false;
+  if (state.mode === 2 && d.lband_pending) {
+    const next = (man.pending_passes || [])[0];
+    text = `No NISAR pass on ${dayOf(d.date)}: this is the ${dayOf(d.lband_from)} image.`
+      + (next ? ` NISAR flew over on ${dayOf(next.date)}; NASA has not released that pass yet.` : '');
+    warn = true;
+  } else if (missing) { text = 'No image from this sensor within a week of this pass.'; warn = true; }
+  el.textContent = text;
+  el.classList.toggle('warn', warn);
+}
+
+/** When the image on screen was taken, which is rarely the same day for all three sensors. */
+function imageDate(d) {
+  if (state.mode === 0) return d.optical_acquired ? `imaged ${dayOf(d.optical_acquired)}` : '';
+  if (state.mode === 1) return d.cband_acquired ? `imaged ${dayOf(d.cband_acquired)}` : '';
+  if (d.lband_pending) return `image of ${dayOf(d.lband_from)}`;
+  return d.nisar_time_utc ? `imaged ${dayOf(d.nisar_time_utc)}` : '';
 }
 
 /** Sensor comparison: flood area each sensor detects on the current date (stats.json). */
@@ -28,24 +54,33 @@ function renderStats() {
   const d = man.dates[state.dateIdx], s = stats.per_date?.[d.date];
   if (!s) { $('rows').innerHTML = ''; $('note').textContent = 'No statistics for this pass.'; $('passKv').innerHTML = ''; return; }
   const det = s.detected_km2 || {};
-  const peak = Math.max(0.01, ...Object.values(stats.per_date).map(x => x.detected_km2?.lband ?? 0));
+  // Bars share one scale across passes and sensors; the 2 km² floor keeps detector noise from filling a bar.
+  const peak = Math.max(2, ...Object.values(stats.per_date).flatMap(x => Object.values(x.detected_km2 || {}).map(v => v ?? 0)));
   $('rows').innerHTML = MODES.map((m, k) => {
-    const v = det[m.key] ?? 0;
+    const v = det[m.key], none = v == null;
     return `<div class="row ${k === state.mode ? 'on' : ''}"><span class="n">${m.short}</span>`
-      + `<span class="bar"><i style="width:${Math.min(100, v / peak * 100)}%;background:${m.acc}"></i></span>`
-      + `<span class="v">${fmt(v)} km²</span></div>`;
+      + `<span class="bar"><i style="width:${none ? 0 : Math.min(100, v / peak * 100)}%;background:${m.acc}"></i></span>`
+      + `<span class="v">${none ? (m.key === 'lband' && d.lband_pending ? 'no pass' : 'no image') : fmt(v) + ' km²'}</span></div>`;
   }).join('');
   const hidden = s.veg_flood_km2 ?? 0, total = (s.open_flood_km2 ?? 0) + hidden;
-  $('note').innerHTML = total < 0.05
-    ? '<div class="callout none"><b>0</b><span>No flood on this pass,<br>only permanent water.</span></div>'
-    : `<div class="callout"><b>+${fmt(hidden)}</b><span>km² hidden under canopy.<br>${Math.round(hidden / total * 100)}% of the flood, seen only by L-band.</span></div>`;
+  if (d.lband_pending) {
+    $('note').innerHTML = `<div class="callout none"><b>${fmt(det.cband)}</b><span>km² is all C-band can find.<br>NISAR did not pass this day, so under the canopy is unknown.</span></div>`;
+  } else if (s.is_reference) {
+    $('note').innerHTML = `<div class="callout none"><b>${fmt(total)}</b><span>km² flagged on a pre-flood pass.<br>Treat this as the detector's background level.</span></div>`;
+  } else {
+    $('note').innerHTML = total < 0.05
+      ? '<div class="callout none"><b>0</b><span>No flood on this pass,<br>only permanent water.</span></div>'
+      : `<div class="callout"><b>+${fmt(hidden)}</b><span>km² hidden under canopy.<br>${Math.round(hidden / total * 100)}% of the flood, seen only by L-band.</span></div>`;
+  }
   $('passKv').innerHTML =
     `<span>Cloud cover</span><span>${fmt(d.optical_cloud_pct, 0)}%</span>`
     + `<span>Rain, last 7 days</span><span>${fmt(d.rain_mm_prev7d, 0)} mm</span>`
     + `<span>People exposed</span><span>${fmt(s.people_exposed, 0)}</span>`
     + `<span>Roads flooded</span><span>${fmt(s.roads_flooded_km)} km</span>`
     + `<span>Facilities hit</span><span>${fmt(s.facilities_affected, 0)}</span>`
-    + (man.simulated ? '<span class="foot">Simulated numbers in this build.</span>' : '');
+    + (man.simulated ? '<span class="foot">Simulated numbers in this build.</span>' : '')
+    + (man.event?.reported || []).filter(r => r.date === d.date)
+      .map(r => `<span class="foot">Reported that day: ${r.text}.</span>`).join('');
 }
 
 function renderLegend() {
@@ -110,7 +145,8 @@ export function renderReadouts(aglMetres) {
   drawTape(((-state.yaw * 180 / Math.PI) % 360 + 360) % 360);
   $('alt').textContent = Math.round(aglMetres);
   const d = man.dates[state.dateIdx];
-  $('readout').textContent = `${d.date} · ${d.label} · ${MODES[state.mode].label}`;
+  const when = imageDate(d);
+  $('readout').textContent = `${d.date} · ${d.label} · ${MODES[state.mode].label}${when ? ` (${when})` : ''}`;
 }
 
 export function initHud(ctx, { swingTo }) {
@@ -121,7 +157,7 @@ export function initHud(ctx, { swingTo }) {
     `<button class="seg" role="tab" data-k="${k}" style="--k:${m.acc}"><b>${m.label}</b><small>${m.band}</small></button>`).join('');
   $('seg').addEventListener('click', e => { const b = e.target.closest('.seg'); if (b) swingTo(+b.dataset.k); });
   on('mode', () => { renderMode(); renderStats(); renderLegend(); });
-  on('date', renderStats);
+  on('date', () => { renderStats(); renderSub(); });
   on('detect', renderLegend);
   renderMode(); renderStats(); renderLegend();
 }

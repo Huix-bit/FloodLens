@@ -52,8 +52,10 @@ export function initProbe({ man, geo, land, terrain }) {
       let started = false;
       const pts = [];
       for (let k = 0; k < n; k++) {
-        const d = getDate(k);
-        if (!d) { started = false; continue; }
+        const d = getDate(k), md = man.dates[k];
+        // a pass with no image from this sensor leaves a gap in the line instead of a repeated value
+        const absent = key === 'lbandR' ? md.lband_pending || md.lband_missing : md.cband_missing;
+        if (!d || absent) { started = false; continue; }
         const y = yOf(Math.max(-25, Math.min(0, meanDb(d[key], col, row, st))));
         if (started) sctx.lineTo(xOf(k), y); else sctx.moveTo(xOf(k), y);
         started = true; pts.push([xOf(k), y]);
@@ -74,8 +76,9 @@ export function initProbe({ man, geo, land, terrain }) {
     if (state.mode === 1) parts.push(`C ${meanDb(data.cbandR, col, row, stretch.c).toFixed(1)} dB`);
     if (state.mode === 2) parts.push(`L-HH ${meanDb(data.lbandR, col, row, stretch.l).toFixed(1)} dB`);
     const f = data.flood[i];
+    const by = man.dates[state.dateIdx].flood_source === 'cband' ? 'Sentinel-1: ' : 'NISAR: ';
     if (f === FLOOD.VEG && state.mode !== 2) parts.push('looks dry to this sensor');
-    else if (f !== FLOOD.DRY) parts.push((f === FLOOD.OPEN || f === FLOOD.VEG ? 'NISAR: ' : '') + FLOOD_NAME[f]);
+    else if (f !== FLOOD.DRY) parts.push((f === FLOOD.OPEN || f === FLOOD.VEG ? by : '') + FLOOD_NAME[f]);
     el.textContent = parts.join(' · ');
     drawSpark(col, row);
   };

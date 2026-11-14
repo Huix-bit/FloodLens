@@ -105,7 +105,8 @@ def main():
     flat = idx.ravel()
     ok = flat >= 0
 
-    dates = [d["date"] for d in cfg["dates"] if (work / "flood" / f"flood_{d['date']}.npy").exists()]
+    detect = json.loads((work / "flood" / "detect.json").read_text(encoding="utf-8"))
+    dates = [d["date"] for d in cfg["dates"] if d["date"] in detect["per_date"]]
     pop = np.load(work / "pop.npy") if (work / "pop.npy").exists() else np.zeros((grid.height, grid.width), "float32")
     rr, rc, rkm = road_points(work, grid)
     r_hex = idx[rr, rc]

@@ -26,6 +26,9 @@ const DIAGRAMS = {
 };
 
 function howHtml(man) {
+  const L = man.method?.lband?.open_water_hh_db != null ? man.method.lband : null;
+  const pending = man.pending_passes || [];
+  const num = v => (+v).toFixed(1).replace('-', '−');
   return `
   <p>One flood, three satellites, three very different pictures. FloodLens lets you swing between them over the same ground and the same dates.</p>
   <div class="eye" style="--k:var(--o)">${DIAGRAMS.optical}<div><h4>Optical: blind in the monsoon</h4>
@@ -40,12 +43,15 @@ function howHtml(man) {
   <p>Water under trees forms a right-angle corner with the trunks. A pulse that reaches it bounces twice (water, then trunk) and returns along the path it came: <b>double bounce</b>. At L-band this raises HH backscatter over flooded plantation by several decibels compared with the same trees on dry ground. C-band shows no such change because its signal never gets through the crown.</p>
   <h3>How the flood map is made</h3>
   <ul>
-    <li>Every NISAR pass on one track is compared with the pre-flood pass, pixel by pixel.</li>
-    <li><b style="color:#2b70ff">Open-water flood</b>: HH is low <i>and</i> clearly lower than before.</li>
-    <li><b style="color:var(--l)">Flooded vegetation</b>: HH is clearly higher than before, over tree or palm land cover.</li>
-    <li>Permanent water, high ground and radar layover/shadow are masked out. Thresholds come from the image histograms.</li>
-    <li>The crosshair read-out and the small chart show this change for the pixel you are looking at.</li>
+    <li>Every NISAR pass on one track is compared, pixel by pixel, with the median of the pre-flood passes${L ? ` (${(man.method.reference_dates || []).length} here)` : ''}.</li>
+    <li><b style="color:#2b70ff">Open-water flood</b>: HH is below ${L ? `${num(L.open_water_hh_db)} dB` : 'a water threshold'} <i>and</i> at least ${L ? num(L.open_water_drop_db) : '3'} dB lower than before.</li>
+    <li><b style="color:var(--l)">Flooded vegetation</b>: over tree or palm land cover, HH is at least ${L ? num(L.flooded_veg_rise_db) : '3'} dB higher than before, and rises at least as much as HV.</li>
+    <li>Permanent water, ground well above the nearest drainage, and tiny patches are removed. The water threshold comes from the image histogram (Otsu's method)${L?.noise_sigma_db ? `; the change thresholds are several times the measured pass-to-pass noise (${num(L.noise_sigma_db.tree_cover)} dB over trees)` : ''}.</li>
+    <li>Sentinel-1 C-band gets the same open-water rule. It has no flooded-vegetation rule because its signal does not reach the ground under a canopy.</li>
+    <li>The crosshair read-out and the small chart show the backscatter of the pixel you are looking at, pass by pass.</li>
   </ul>
+  ${pending.length ? `<h3>What this build can and cannot show yet</h3>
+  <p class="warn">${pending.map(p => esc(p.note)).join(' ')} Until that pass is released, the L-band passes here are all from before the flood, and the flood date shows only what Sentinel-1 C-band could find. The explanation above is established radar physics; on this event it is still to be confirmed.</p>` : ''}
   <h3>Honest limits</h3>
   <ul>
     <li>Building walls also double-bounce, so towns are bright in every pass; change, not brightness alone, is what flags a flood.</li>
@@ -61,6 +67,7 @@ function sourcesHtml(man) {
     <div class="s"><b>${esc(s.name)}</b>${s.nasa ? '<span class="tagn nasa">NASA</span>' : ''}${s.simulated ? '<span class="tagn simd">not yet loaded</span>' : ''}
       <div class="p">${esc(s.provider)}</div>
       <div class="u">Used for: ${esc(s.used_for)}</div>
+      ${s.detail ? `<div class="u">${esc(s.detail)}</div>` : ''}
       ${/^https?:\/\//.test(s.url || '') ? `<div class="u"><a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.url)}</a></div>` : ''}
     </div>`).join('');
   return `

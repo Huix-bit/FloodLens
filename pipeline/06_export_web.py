@@ -2,9 +2,12 @@
 
 Reads <work_dir> (steps 01-05) and writes manifest.json, dem.png, landcover.png, per-pass
 optical / cband / lband / flood PNGs, stats.json, hexes.geojson, buildings.geojson and
-places.geojson. Only passes with a real NISAR subset are exported. A layer that could not be
-obtained for a pass is written as an empty image and flagged in the manifest - nothing is
-invented.
+places.geojson. Nothing is invented:
+  * a date is exported only if step 03 produced a flood raster for it;
+  * a date without a NISAR pass (config `nisar: false`) reuses the latest earlier NISAR image
+    and is flagged `lband_pending` - the app says so on screen;
+  * a layer that could not be obtained is written as an empty image and flagged `*_missing`;
+  * configured NISAR dates that NASA has not published yet are listed under `pending_passes`.
 
 Run from the repo root:   python pipeline/06_export_web.py [--config ...]
 """
@@ -114,7 +117,7 @@ def main():
     anc = json.loads((work / "ancillary.json").read_text(encoding="utf-8")) if (work / "ancillary.json").exists() else {}
     totals = json.loads((work / "exposure" / "totals.json").read_text(encoding="utf-8")) if (work / "exposure" / "totals.json").exists() else {"per_date": {}}
     listing = json.loads((work / "nisar_granules.json").read_text(encoding="utf-8"))
-    dates = [d for d in cfg["dates"] if (work / "flood" / f"flood_{d['date']}.npy").exists()]
+    dates = [d for d in cfg["dates"] if d["date"] in detect["per_date"]]
     if not dates:
         raise SystemExit("nothing to export - run steps 02 and 03 first")
 
@@ -127,24 +130,35 @@ def main():
     lo_l, hi_l = cfg["stretch_db"]["lband"]
     shape = (grid.height, grid.width)
 
-    entries, stats = [], {}
+    entries, stats, levels, last_nisar = [], {}, set(), None
     for d in dates:
         date = d["date"]
-        meta = json.loads((work / "nisar" / f"{date}.json").read_text(encoding="utf-8"))
-        hh = np.load(work / "nisar" / f"{date}.npz")["hh"]
-        save(stretch(to_db(hh), lo_l, hi_l), out / f"lband_{date}.png")
-        save(np.load(work / "flood" / f"flood_{date}.npy").astype(np.uint8), out / f"flood_{date}.png")
-        entry = {"date": date, "label": d["label"],
-                 "nisar_track": f"{meta.get('trackNumber', listing['track'])} {str(meta.get('orbitPassDirection', listing['direction'])).lower()}",
-                 "nisar_granule": meta["granule"], "nisar_time_utc": meta["start"][:16] + "Z",
+        p = detect["per_date"][date]
+        entry = {"date": date, "label": d["label"], "nisar_track": None,
                  "optical": f"optical_{date}.png", "optical_cloud_pct": None,
                  "cband": f"cband_{date}.png", "lband": f"lband_{date}.png", "flood": f"flood_{date}.png",
-                 "rain_mm_prev7d": None}
+                 "rain_mm_prev7d": None, "flood_source": p["source"]}
+        if p["source"] == "nisar":
+            meta = json.loads((work / "nisar" / f"{date}.json").read_text(encoding="utf-8"))
+            levels.add(meta["collection"])
+            last_nisar = date
+            save(stretch(to_db(np.load(work / "nisar" / f"{date}.npz")["hh"]), lo_l, hi_l), out / f"lband_{date}.png")
+            entry.update(nisar_track=f"{meta.get('trackNumber', listing['track'])} {str(meta.get('orbitPassDirection', listing['direction'])).lower()}",
+                         nisar_granule=meta["granule"], nisar_time_utc=meta["start"][:16] + "Z", nisar_collection=meta["collection"])
+        elif last_nisar:
+            # No NISAR pass on this date: show the latest earlier pass and say so.
+            save(stretch(to_db(np.load(work / "nisar" / f"{last_nisar}.npz")["hh"]), lo_l, hi_l), out / f"lband_{date}.png")
+            entry.update(lband_pending=True, lband_from=last_nisar)
+        else:
+            save(np.zeros(shape, np.uint8), out / f"lband_{date}.png")
+            entry["lband_missing"] = True
+        save(np.load(work / "flood" / f"flood_{date}.npy").astype(np.uint8), out / f"flood_{date}.png")
+
         cb = work / "cband" / f"{date}.npy"
         if cb.exists():
             save(stretch(to_db(np.load(cb)), lo_c, hi_c), out / f"cband_{date}.png")
             info = anc.get("cband", {}).get("dates", {}).get(date, {})
-            entry.update(cband_acquired=info.get("acquired"), cband_offset_days=info.get("offset_days"))
+            entry.update(cband_acquired=info.get("acquired"), cband_offset_days=info.get("offset_days"), cband_track=info.get("track"))
         else:
             save(np.zeros(shape, np.uint8), out / f"cband_{date}.png")
             entry["cband_missing"] = True
@@ -154,7 +168,7 @@ def main():
             info = anc.get("optical", {}).get("dates", {}).get(date, {})
             entry.update(optical_scene=info.get("scene"), optical_acquired=info.get("acquired"),
                          optical_offset_days=info.get("offset_days"),
-                         optical_cloud_pct=detect["per_date"][date].get("optical_cloud_pct", info.get("cloud_pct")))
+                         optical_cloud_pct=p.get("optical_cloud_pct", info.get("cloud_pct")))
         else:
             save(np.zeros(shape + (3,), np.uint8), out / f"optical_{date}.png")
             entry["optical_missing"] = True
@@ -162,11 +176,10 @@ def main():
         if rain:
             entry["rain_mm_prev7d"] = rain["mm_prev7d"]
         entries.append(entry)
-        p = detect["per_date"][date]
         det = p["detected_km2"]
         stats[date] = {"open_flood_km2": p["open_flood_km2"], "veg_flood_km2": p["veg_flood_km2"],
-                       "detected_km2": {"optical": det.get("optical"), "cband": det.get("cband"), "lband": det["lband"]},
-                       "is_reference": p.get("is_reference", False),
+                       "detected_km2": {"optical": det.get("optical"), "cband": det.get("cband"), "lband": det.get("lband")},
+                       "is_reference": p.get("is_reference", False), "flood_source": p["source"],
                        **totals["per_date"].get(date, {"people_exposed": 0, "roads_flooded_km": 0, "facilities_affected": 0})}
 
     write_json(out / "stats.json", {"per_date": stats})
@@ -174,13 +187,17 @@ def main():
     (out / "hexes.geojson").write_text(hexes.read_text(encoding="utf-8") if hexes.exists() else '{"type":"FeatureCollection","features":[]}', encoding="utf-8")
     buildings = export_buildings(work, grid)
     write_json(out / "buildings.geojson", buildings, compact=True)
-    write_json(out / "places.geojson", export_places(work, grid), compact=True)
+    places = export_places(work, grid)
+    for rc in cfg.get("relief_centres", []):
+        places["features"].append({"type": "Feature", "properties": {"name": rc["name"], "place": "relief_centre"},
+                                   "geometry": {"type": "Point", "coordinates": [rc["lon"], rc["lat"]]}})
+    write_json(out / "places.geojson", places, compact=True)
 
-    levels = sorted({json.loads((work / "nisar" / f"{d['date']}.json").read_text(encoding="utf-8"))["collection"] for d in dates})
+    n_nisar = sum(1 for e in entries if e["flood_source"] == "nisar")
     sources = [{"name": "NISAR L2 Geocoded Polarimetric Covariance (GCOV), L-band HH / HV", "provider": "NASA / ISRO via ASF DAAC",
                 "url": "https://search.asf.alaska.edu/", "nasa": True, "simulated": False,
                 "used_for": "L-band mode; open-water and under-canopy flood detection",
-                "detail": f"Track {listing['track']} {listing['direction'].lower()}, {len(dates)} passes; collections: {', '.join(levels)}"}]
+                "detail": f"Track {listing['track']} {listing['direction'].lower()}, {n_nisar} passes; collections: {', '.join(sorted(levels))}"}]
     used_for = {"cband": "C-band mode; open-water flood seen by Sentinel-1", "optical": "Optical mode; cloud cover; optical water test",
                 "dem": "3D terrain; height-above-drainage mask", "rain": "Rainfall in the 7 days before each pass",
                 "landcover": "Land-cover classes (palm / tree crop, forest, urban, crop)", "water": "Permanent-water mask",
@@ -191,6 +208,9 @@ def main():
             sources.append({"name": a["name"], "provider": a["provider"], "url": a["url"], "nasa": bool(a.get("nasa")),
                             "simulated": False, "used_for": used_for[key]})
 
+    exported = {e["date"] for e in entries}
+    pending = [{"date": d["date"], "label": d["label"], "note": d.get("pending_note", "NISAR pass not yet published by NASA")}
+               for d in cfg["dates"] if d["date"] not in exported and d.get("nisar") is not False]
     write_json(out / "manifest.json", {
         "title": cfg["title"],
         "simulated": False,
@@ -209,6 +229,10 @@ def main():
         # Optional extensions (the frontend works without them):
         "stretch_db": cfg["stretch_db"],
         "exposure_weights": cfg["exposure"]["weights"],
+        "pending_passes": pending,
+        "home_lonlat": [cfg["home"]["lon"], cfg["home"]["lat"]] if cfg.get("home") else None,
+        "default_date": cfg.get("default_date"),
+        "event": cfg.get("event"),
         "method": {"reference_dates": detect["reference_dates"], "lband": detect["lband"], "cband": detect["cband"],
                    "optical": detect["optical"], "permanent_water_km2": detect["permanent_water_km2"],
                    "landcover": anc.get("landcover", {}).get("method")},
@@ -216,7 +240,7 @@ def main():
     })
     size = sum(f.stat().st_size for f in out.iterdir()) / 1e6
     print(f"wrote {len(list(out.iterdir()))} files, {size:.1f} MB -> {out}")
-    print(f"  passes {[e['date'] for e in entries]}  buildings {len(buildings['features'])}")
+    print(f"  passes {[e['date'] for e in entries]}  pending {[p['date'] for p in pending]}  buildings {len(buildings['features'])}")
 
 
 if __name__ == "__main__":

@@ -13,20 +13,28 @@ const dayOf = t => new Date(t).toLocaleDateString('en-GB', DAY);
 function renderChips() {
   const n = man.dates.length;
   const times = man.dates.map(d => Date.parse(d.date + 'T00:00:00Z'));
-  const dated = times.every(Number.isFinite), t0 = Math.min(...times), span = Math.max(...times) - t0;
+  // Passes NASA has not released yet still get a place on the axis, as an empty marker.
+  const pending = (man.pending_passes || []).map(p => ({ ...p, t: Date.parse(p.date + 'T00:00:00Z') })).filter(p => Number.isFinite(p.t));
+  const all = times.concat(pending.map(p => p.t));
+  const dated = times.every(Number.isFinite), t0 = Math.min(...all), span = Math.max(...all) - t0;
   const per = man.dates.map(d => stats.per_date?.[d.date] || {});
-  const peak = Math.max(0.01, ...per.map(s => (s.open_flood_km2 ?? 0) + (s.veg_flood_km2 ?? 0)));
+  // 2 km² floor: on a pass with no flood, detector noise must not grow into a full column.
+  const peak = Math.max(2, ...per.map(s => (s.open_flood_km2 ?? 0) + (s.veg_flood_km2 ?? 0)));
   const el = $('chips');
-  el.classList.toggle('dense', n > 6);
+  el.classList.toggle('dense', n + pending.length > 6);
   el.innerHTML = man.dates.map((d, k) => {
     const open = per[k].open_flood_km2 ?? 0, veg = per[k].veg_flood_km2 ?? 0;
     const frac = n < 2 ? 0.5 : dated && span > 0 ? (times[k] - t0) / span : k / (n - 1);
-    return `<button class="chip ${k === state.dateIdx ? 'on' : ''}" data-k="${k}" style="left:${8 + frac * 84}%"`
-      + ` title="${d.date}: ${(open + veg).toFixed(1)} km² flooded, ${veg.toFixed(1)} km² of it under canopy">`
+    const tip = d.lband_pending
+      ? `${d.date}: no NISAR pass. C-band alone finds ${open.toFixed(1)} km² of open-water flood`
+      : `${d.date}: ${(open + veg).toFixed(1)} km² flagged, ${veg.toFixed(1)} km² of it under canopy`;
+    return `<button class="chip ${k === state.dateIdx ? 'on' : ''}" data-k="${k}" style="left:${8 + frac * 84}%" title="${tip}">`
       + `<span class="col"><i class="veg" style="height:${veg / peak * 100}%"></i><i class="open" style="height:${open / peak * 100}%"></i></span>`
       + `<span class="tick"></span><b>${dated ? dayOf(times[k]) : d.date}</b>`
       + `<small>${k < 9 ? `${k + 1} · ` : ''}${d.label}</small></button>`;
-  }).join('');
+  }).join('') + (dated && span > 0 ? pending.map(p =>
+    `<span class="chip pending" style="left:${8 + (p.t - t0) / span * 84}%" title="${String(p.note || '').replace(/"/g, '&quot;')}">`
+    + `<span class="col"></span><span class="tick"></span><b>${dayOf(p.t)}</b><small>NISAR pass, awaiting NASA</small></span>`).join('') : '');
   if (dated) {
     const year = t => new Date(t).getUTCFullYear(), last = t0 + span;
     $('tlTitle').textContent = `Satellite passes · ${dayOf(t0)}${year(t0) !== year(last) ? ' ' + year(t0) : ''} to ${dayOf(last)} ${year(last)}`;

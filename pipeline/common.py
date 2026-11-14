@@ -234,9 +234,86 @@ def rasterize_lonlat(geoms, grid: Grid, all_touched: bool = False):
 
 def earthdata_login():
     """Log in to NASA Earthdata from ~/.netrc (never from code or config). Returns None if absent."""
+    import os
     import earthaccess
+    # earthaccess looks for ~/_netrc on Windows; accept the conventional ~/.netrc there too.
+    dot = Path.home() / ".netrc"
+    if not os.environ.get("NETRC") and not (Path.home() / "_netrc").exists() and dot.exists():
+        os.environ["NETRC"] = str(dot)
     try:
         auth = earthaccess.login(strategy="netrc")
         return earthaccess if auth and auth.authenticated else None
     except Exception:
         return None
+
+
+class HttpRangeFile:
+    """Seekable read-only file over HTTP range requests, for h5py.
+
+    Only the blocks h5py asks for are transferred, so a few MB are read from a multi-GB
+    granule. Uses the authenticated `requests` session from earthaccess (plain threads and
+    sockets - no asyncio DNS, which fails on some Windows set-ups).
+    """
+
+    def __init__(self, url: str, session, block: int = 4 * 1024 * 1024, max_blocks: int = 96):
+        self.url, self.s, self.block, self.max_blocks = url, session, block, max_blocks
+        self.pos, self.cache, self.fetched = 0, {}, 0
+        r = self._get(0, 0)
+        self.size = int(r.headers["Content-Range"].split("/")[-1])
+
+    def _get(self, a: int, b: int):
+        last = None
+        for attempt in range(5):
+            try:
+                r = self.s.get(self.url, headers={"Range": f"bytes={a}-{b}"}, timeout=180)
+                if r.status_code in (200, 206):
+                    return r
+                last = RuntimeError(f"HTTP {r.status_code} for {self.url.split('/')[-1]}")
+                if r.status_code in (401, 403):
+                    break
+            except Exception as err:                      # noqa: BLE001 - network hiccup, retry
+                last = err
+            import time
+            time.sleep(2 * (attempt + 1))
+        raise last
+
+    def _block(self, i: int) -> bytes:
+        if i not in self.cache:
+            if len(self.cache) >= self.max_blocks:
+                self.cache.pop(next(iter(self.cache)))
+            a = i * self.block
+            self.cache[i] = self._get(a, min(a + self.block, self.size) - 1).content
+            self.fetched += len(self.cache[i])
+        return self.cache[i]
+
+    def read(self, n: int = -1) -> bytes:
+        if n < 0 or self.pos + n > self.size:
+            n = self.size - self.pos
+        out, end = [], self.pos + n
+        while self.pos < end:
+            i, off = divmod(self.pos, self.block)
+            chunk = self._block(i)[off:off + (end - self.pos)]
+            if not chunk:
+                break
+            out.append(chunk)
+            self.pos += len(chunk)
+        return b"".join(out)
+
+    def readinto(self, b) -> int:
+        data = self.read(len(b))
+        b[:len(data)] = data
+        return len(data)
+
+    def seek(self, off: int, whence: int = 0) -> int:
+        self.pos = off if whence == 0 else self.pos + off if whence == 1 else self.size + off
+        return self.pos
+
+    def tell(self) -> int:
+        return self.pos
+
+    def readable(self): return True
+    def seekable(self): return True
+    def writable(self): return False
+    def close(self): self.cache.clear()
+    def __enter__(self): return self
+    def __exit__(self, *a): self.close()

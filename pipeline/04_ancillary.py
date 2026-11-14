@@ -81,7 +81,7 @@ def tiles_1deg(grid):
 
 def pass_times(cfg, work) -> dict[str, datetime]:
     """UTC acquisition time of each configured date (from the NISAR search, else noon)."""
-    out = {d["date"]: datetime.fromisoformat(d["date"] + "T12:00:00+00:00") for d in cfg["dates"]}
+    out = {d["date"]: datetime.fromisoformat(d["date"] + "T" + d.get("time_utc", "12:00") + ":00+00:00") for d in cfg["dates"]}
     p = work / "nisar_granules.json"
     if p.exists():
         for g in json.loads(p.read_text(encoding="utf-8"))["passes"]:
@@ -123,7 +123,7 @@ def stage_dem(cfg, grid, work):
                     dem = np.where(np.isnan(dem), part, dem)
         used = {"name": "Copernicus DEM GLO-30", "provider": "ESA / Airbus via AWS Open Data",
                 "url": "https://doi.org/10.5270/ESA-c5d3d65", "nasa": False}
-    dem = np.nan_to_num(dem, nan=0.0)
+    dem = np.clip(np.nan_to_num(dem, nan=0.0), -3.0, None)   # radar DEM noise over open sea goes far below zero
     np.save(work / "dem.npy", dem)
     note(work, "dem", used)
     print(f"  dem: {used['name']}  min {dem.min():.1f} m  max {dem.max():.1f} m  mean {dem.mean():.1f} m")
@@ -294,53 +294,77 @@ def stage_pop(cfg, grid, work):
 
 # --------------------------------------------------------------------------- C-band (OPERA RTC-S1)
 def stage_cband(cfg, grid, work):
+    """Every Sentinel-1 acquisition that covers the AOI, mosaicked per track and date.
+
+    Change detection needs the same look geometry, so 03_flood_detect.py compares each
+    acquisition with earlier ones on the SAME track. For display, each timeline date gets the
+    nearest acquisition in time.
+    """
     ea = earthdata_login()
     if not ea:
         print("  cband: SKIPPED - needs Earthdata login in ~/.netrc")
         return
-    import rasterio
+    from shapely.geometry import Polygon, box
+    from shapely.ops import unary_union
     lon0, lat0, lon1, lat1 = grid.bbox_wgs84
+    aoi = box(lon0, lat0, lon1, lat1)
     times = pass_times(cfg, work)
     t0 = min(times.values()) - timedelta(days=8)
     t1 = max(times.values()) + timedelta(days=8)
     items = cmr("C2777436413-ASF", bounding_box=f"{lon0},{lat0},{lon1},{lat1}",
                 temporal=f"{t0:%Y-%m-%dT%H:%M:%SZ},{t1:%Y-%m-%dT%H:%M:%SZ}")
-    # group bursts by acquisition (same track and same pass = within a few minutes)
     acq: dict[tuple, list] = {}
     for it in items:
-        name = it["umm"]["GranuleUR"]                     # OPERA_L2_RTC-S1_T070-148220-IW3_20260920T113344Z_...
+        name = it["umm"]["GranuleUR"]                     # OPERA_L2_RTC-S1_T070-148220-IW3_20260920T113344Z_..._S1D_30_v1.0
         parts = name.split("_")
-        track = parts[3].split("-")[0]
         when = datetime.strptime(parts[4], "%Y%m%dT%H%M%SZ").replace(tzinfo=timezone.utc)
         urls = [r["URL"] for r in it["umm"].get("RelatedUrls", []) if r["URL"].startswith("https") and r["URL"].endswith("_VV.tif")]
+        pts = it["umm"]["SpatialExtent"]["HorizontalSpatialDomain"]["Geometry"]["GPolygons"][0]["Boundary"]["Points"]
         if urls:
-            acq.setdefault((track, when.strftime("%Y-%m-%dT%H")), []).append((when, urls[0], name))
+            acq.setdefault((parts[3].split("-")[0], when.strftime("%Y%m%d")), []).append(
+                {"when": when, "url": urls[0], "name": name, "sat": parts[6],
+                 "poly": Polygon([(q["Longitude"], q["Latitude"]) for q in pts])})
     session = ea.get_requests_https_session()
     out = work / "cband"
     out.mkdir(exist_ok=True)
-    chosen = {}
-    # one Sentinel-1 track for the whole timeline (same look geometry), the one with most acquisitions near passes
-    tracks = sorted({k[0] for k in acq})
-    def nearest(track, when):
-        cands = [(abs((v[0][0] - when).total_seconds()), k) for k, v in acq.items() if k[0] == track]
-        return min(cands) if cands else (float("inf"), None)
-    best = min(tracks, key=lambda tr: sum(nearest(tr, w)[0] for w in times.values())) if tracks else None
-    for date, when in times.items():
-        gap, key = nearest(best, when) if best else (None, None)
-        if key is None or gap > 6.5 * 86400:
-            print(f"  cband {date}: no Sentinel-1 acquisition within 6 days")
+    index = []
+    for (track, day), bursts in sorted(acq.items(), key=lambda kv: kv[0][1]):
+        cover = unary_union([b["poly"] for b in bursts]).intersection(aoi).area / aoi.area
+        if cover < 0.9:
+            print(f"  cband {track} {day}: covers only {cover * 100:.0f}% of the AOI - not used")
             continue
-        mosaic = np.full((grid.height, grid.width), np.nan, dtype="float32")
-        for _, url, name in acq[key]:
-            tif = download(url, out / url.split("/")[-1], session)
-            part = read_to_grid(str(tif), grid, "average", src_nodata=np.nan)
-            if part is not None:
-                mosaic = np.where(np.isnan(mosaic), part, mosaic)
-        np.save(out / f"{date}.npy", mosaic)                 # gamma0 VV, linear power
-        chosen[date] = {"acquired": acq[key][0][0].strftime("%Y-%m-%dT%H:%MZ"), "track": best,
-                        "offset_days": round((acq[key][0][0] - when).total_seconds() / 86400, 1),
-                        "bursts": [n for _, _, n in acq[key]], "valid_pct": round(float(np.isfinite(mosaic).mean() * 100), 1)}
-        print(f"  cband {date}: Sentinel-1 {chosen[date]['acquired']} ({chosen[date]['offset_days']:+.1f} d), {chosen[date]['valid_pct']}% valid")
+        f = out / f"acq_{track}_{day}.npy"
+        if f.exists():
+            mosaic = np.load(f)
+        else:
+            mosaic = np.full((grid.height, grid.width), np.nan, dtype="float32")
+            for b in bursts:
+                tif = download(b["url"], out / "tif" / b["url"].split("/")[-1], session)
+                part = read_to_grid(str(tif), grid, "bilinear", src_nodata=np.nan)
+                if part is not None:
+                    mosaic = np.where(np.isnan(mosaic), part, mosaic)
+            np.save(f, mosaic)                             # gamma0 VV, linear power
+        when = min(b["when"] for b in bursts)
+        index.append({"track": track, "satellite": bursts[0]["sat"], "time": when.strftime("%Y-%m-%dT%H:%MZ"), "file": f.name,
+                      "valid_pct": round(float(np.isfinite(mosaic).mean() * 100), 1), "bursts": [b["name"] for b in bursts]})
+        print(f"  cband {track} {index[-1]['time']}: {index[-1]['valid_pct']}% valid")
+    write_json(out / "index.json", index)
+    chosen = {}
+    for date, when in times.items():
+        if not index:
+            break
+        best = min(index, key=lambda a: abs((datetime.fromisoformat(a["time"].replace("Z", "+00:00")) - when).total_seconds()))
+        gap = (datetime.fromisoformat(best["time"].replace("Z", "+00:00")) - when).total_seconds() / 86400
+        if abs(gap) > 6.5:
+            print(f"  cband {date}: no Sentinel-1 acquisition within 6.5 days")
+            continue
+        np.save(out / f"{date}.npy", np.load(out / best["file"]))
+        chosen[date] = {"acquired": best["time"], "track": best["track"], "satellite": best["satellite"],
+                        "offset_days": round(gap, 1), "file": best["file"], "valid_pct": best["valid_pct"]}
+        print(f"  cband {date}: uses {best['track']} {best['time']} ({gap:+.1f} d)")
+    for old in out.glob("20*.npy"):
+        if old.stem not in chosen:
+            old.unlink()
     note(work, "cband", {"name": "OPERA Radiometric Terrain Corrected SAR Backscatter from Sentinel-1 (RTC-S1) v1",
                          "provider": "NASA JPL OPERA via ASF DAAC (contains modified Copernicus Sentinel data)",
                          "url": "https://doi.org/10.5067/SNWG/RTC-S1-V1", "nasa": True, "dates": chosen})
@@ -411,7 +435,7 @@ def stage_rain(cfg, grid, work):
     session = ea.get_requests_https_session()
     out = work / "rain"
     out.mkdir(exist_ok=True)
-    daily, product = {}, None
+    daily, product, fails = {}, None, 0
     days = sorted({(w - timedelta(days=k)).date() for w in times.values() for k in range(0, 7)})
     for short, cid in (("GPM_3IMERGDL", "C2723754859-GES_DISC"), ("GPM_3IMERGDE", "C2723754850-GES_DISC")):
         items = cmr(cid, temporal=f"{days[0]}T00:00:00Z,{days[-1]}T23:59:59Z")
@@ -433,7 +457,30 @@ def stage_rain(cfg, grid, work):
                 daily[day] = float(np.mean(v[v >= 0]))
                 product = product or short
             except Exception as err:                      # noqa: BLE001
-                print(f"    rain {day}: {err!r}")
+                fails += 1
+                print(f"    rain {day}: {str(err)[:90]}")
+                if fails >= 3 and not daily:              # not authorised for GES DISC: stop asking
+                    break
+        if fails >= 3 and not daily:
+            break
+    source = {"name": "GPM IMERG Late/Early Precipitation L3 1 day 0.1 degree V07", "provider": "NASA GES DISC",
+              "url": "https://doi.org/10.5067/GPM/IMERGDL/DAY/07", "product": product}
+    if len(daily) < len(days) - 2:
+        # GES DISC needs a one-time application approval in the Earthdata profile. Without it,
+        # fall back to NASA POWER daily precipitation (MERRA-2 / GEOS-IT, about 0.5 degree).
+        lon, lat = (lon0 + lon1) / 2, (lat0 + lat1) / 2
+        url = ("https://power.larc.nasa.gov/api/temporal/daily/point?parameters=PRECTOTCORR&community=AG"
+               f"&longitude={lon:.3f}&latitude={lat:.3f}&start={days[0]:%Y%m%d}&end={days[-1]:%Y%m%d}&format=JSON")
+        try:
+            with urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=120) as r:
+                vals = json.load(r)["properties"]["parameter"]["PRECTOTCORR"]
+            daily = {f"{k[:4]}-{k[4:6]}-{k[6:]}": float(v) for k, v in vals.items() if float(v) >= 0}
+            source = {"name": "NASA POWER daily corrected precipitation (PRECTOTCORR, MERRA-2 / GEOS-IT)",
+                      "provider": "NASA Langley Research Center POWER project", "url": "https://power.larc.nasa.gov/",
+                      "product": "POWER PRECTOTCORR"}
+            print("    IMERG not accessible with this login - using NASA POWER daily precipitation")
+        except Exception as err:                      # noqa: BLE001
+            print(f"    NASA POWER fallback failed: {err!r}")
     res = {}
     for date, when in times.items():
         need = [str((when - timedelta(days=k)).date()) for k in range(0, 7)]
@@ -442,10 +489,9 @@ def stage_rain(cfg, grid, work):
             res[date] = {"mm_prev7d": round(sum(have) * 7 / len(have), 1), "days_available": len(have)}
             print(f"  rain {date}: {res[date]['mm_prev7d']} mm in the 7 days to the pass ({len(have)}/7 days)")
         else:
-            print(f"  rain {date}: only {len(have)}/7 daily files available - left out")
+            print(f"  rain {date}: only {len(have)}/7 daily values available - left out")
     write_json(out / "daily_mm.json", daily)
-    note(work, "rain", {"name": "GPM IMERG Late/Early Precipitation L3 1 day 0.1 degree V07", "provider": "NASA GES DISC",
-                        "url": "https://doi.org/10.5067/GPM/IMERGDL/DAY/07", "nasa": True, "product": product, "dates": res})
+    note(work, "rain", {**source, "nasa": True, "dates": res})
 
 
 STAGES = {"dem": stage_dem, "osm": stage_osm, "landcover": stage_landcover, "water": stage_water, "pop": stage_pop,

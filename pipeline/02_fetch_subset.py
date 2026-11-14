@@ -17,7 +17,7 @@ import time
 
 import numpy as np
 
-from common import earthdata_login, grid_from_config, load_config, warp_to_grid, work_dir, write_json
+from common import HttpRangeFile, earthdata_login, grid_from_config, load_config, warp_to_grid, work_dir, write_json
 
 
 def text(v):
@@ -78,10 +78,12 @@ def read_pass(h, grid, freq: str):
             meta[key] = text(ident[key])
     params = f"science/{band}/GCOV/metadata/processingInformation/parameters"
     if params in h:
-        for key in ("outputBackscatterNormalizationConvention", "outputBackscatterExpressionConvention",
-                    "radiometricTerrainCorrectionApplied", "rtcAlgorithm"):
+        for key in ("rtc/outputBackscatterNormalizationConvention", "rtc/outputBackscatterExpressionConvention",
+                    "radiometricTerrainCorrectionApplied", "noiseCorrectionApplied", "rfiMitigationApplied",
+                    "shadowMaskingApplied", "preprocessing/frequencyA/numberOfAzimuthLooks",
+                    "preprocessing/frequencyA/numberOfRangeLooks"):
             if key in h[params]:
-                meta[key] = text(h[params][key])
+                meta[key.split("/")[-1]] = text(h[params][key])
     return out.get("HHHH"), out.get("HVHV"), meta
 
 
@@ -103,7 +105,7 @@ def main():
         raise SystemExit("No NASA Earthdata login found. Put this one line in ~/.netrc and run again:\n"
                          "  machine urs.earthdata.nasa.gov login YOUR_USERNAME password YOUR_PASSWORD")
     import h5py
-    fs = ea.get_fsspec_https_session()
+    session = ea.get_requests_https_session()
     out = work / "nisar"
     out.mkdir(exist_ok=True)
     for d in cfg["dates"]:
@@ -118,8 +120,7 @@ def main():
         g = passes[date]
         t = time.time()
         print(f"{date}: opening {g['granule']}")
-        with fs.open(g["https"], mode="rb", block_size=4 * 1024 * 1024, cache_type="blockcache") as fobj, \
-                h5py.File(fobj, "r") as h:
+        with HttpRangeFile(g["https"], session) as fobj, h5py.File(fobj, "r") as h:
             if args.inspect:
                 inspect(h)
                 return
@@ -128,7 +129,7 @@ def main():
         np.savez_compressed(dest, hh=hh, hv=hv if hv is not None else np.full_like(hh, np.nan))
         write_json(out / f"{date}.json", meta)
         ok = np.isfinite(hh)
-        print(f"   {time.time() - t:.0f} s  source {meta['posting_m']} m EPSG:{meta['epsg_source']}  window {meta['window_px']}  "
+        print(f"   {time.time() - t:.0f} s  read {fobj.fetched / 1e6:.0f} MB of {fobj.size / 1e9:.1f} GB  source {meta['posting_m']} m EPSG:{meta['epsg_source']}  window {meta['window_px']}  "
               f"valid {ok.mean() * 100:.1f}%  HH median {10 * np.log10(np.nanmedian(hh)):.1f} dB")
 
 

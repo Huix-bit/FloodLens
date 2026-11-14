@@ -27,7 +27,31 @@ dates:
   - { date: "2026-10-07", label: "Baseline" }
   - { date: "2026-10-19", label: "Baseline" }
   - { date: "2026-10-31", label: "Before flood" }
-  - { date: "2026-11-12", label: "Flood" }
+  # Sentinel-1 imaged the flood on 7 Nov; NISAR had no pass that day. Shown as C-band only.
+  - { date: "2026-11-07", label: "Flood, C-band only", nisar: false, time_utc: "11:33" }
+  # NISAR flew over on 12 Nov 22:50 UTC. Exported as soon as NASA publishes the L2 product.
+  - { date: "2026-11-12", label: "Flood",
+      pending_note: "NISAR imaged this flood on 12 Nov 2026, 22:50 UTC (track 112). NASA published the raw L0B data on 13 Nov; the L2 GCOV product was not yet released when this build was made." }
+
+# Shown in the app next to the satellite numbers (source: Malaysian Social Welfare Department
+# InfoBencana figures as reported by BERNAMA; see pipeline/validation.md).
+event:
+  name: "Kuala Selangor floods"
+  reported:
+    - { date: "2026-11-07", text: "3,834 evacuees in Selangor (Kuala Selangor, Gombak, Sabak Bernam)" }
+    - { date: "2026-11-10", text: "848 evacuees in 5 relief centres, Kuala Selangor" }
+    - { date: "2026-11-14", text: "1,498 evacuees in 7 relief centres, Kuala Selangor" }
+
+# Where the app opens: above the Bukit Kuching / Parit Mahang relief-centre area.
+home: { lon: 101.352, lat: 3.271 }
+default_date: "2026-11-07"
+
+# Relief centres named in the reports that could be located in OpenStreetMap (shown as labels).
+relief_centres:
+  - { name: "Relief centre: SK Dato' Maharaja Lela", lon: 101.35238, lat: 3.27123 }
+
+# First day of the event: acquisitions before it are "pre-event" for the Sentinel-1 reference.
+event_start: "2026-11-03"
 
 # Dates used as the "dry" reference for change detection (all must be before the flood).
 reference_dates: ["2026-09-25", "2026-10-07", "2026-10-19", "2026-10-31"]

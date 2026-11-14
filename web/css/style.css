@@ -228,3 +228,19 @@ code{font:400 .92em var(--mono);background:var(--bg2);padding:0 4px}
 @media (max-height:520px){ #readout{display:none} #probe{top:calc(50% + 28px)} }
 body.present #help,body.present #legend{display:none}
 body.present #console{grid-template-columns:300px minmax(320px,1fr) 208px}
+
+/* real-data states */
+#modeSub.warn{color:var(--warn);border-left:1px solid var(--rule);margin:-1px 0 0;max-width:min(560px,92vw);line-height:1.4;white-space:normal}
+.chip.pending{cursor:default}
+.chip.pending .col{border:1px dashed var(--mute);border-bottom:0;box-sizing:border-box}
+.chip.pending b{color:var(--mute)}
+.chip.pending small{color:var(--warn)}
+.place.relief{color:#fff;border-bottom:2px solid var(--warn);padding-bottom:1px}
+.real{font-size:12px;line-height:1.5;color:var(--ink);border-left:2px solid var(--l);padding-left:10px;margin:10px 0}
+.foot{line-height:1.35}
+/* a pending pass is labelled to the right of its tick so it never sits on the pass before it */
+.chip.pending{width:92px;margin-left:-13px;text-align:left}
+.chip.pending .col{margin:0 0 4px}
+.chip.pending .tick{margin:0 0 3px 13px}
+.chip.pending small{white-space:normal;line-height:1.2}
+#chips.dense .chip.pending{width:92px;margin-left:-13px} #chips.dense .chip.pending small{display:block}

@@ -63,7 +63,7 @@ def robust_sigma(x):
 def otsu_water(db_ref, water, land, lo, hi, fallback, rng):
     """Otsu threshold between water and land on a balanced sample; fallback if unusable."""
     from skimage.filters import threshold_otsu
-    core = ndi.binary_erosion(water, iterations=2) & np.isfinite(db_ref)
+    core = ndi.binary_erosion(water, iterations=1) & np.isfinite(db_ref)
     lnd = land & np.isfinite(db_ref)
     n = int(min(core.sum(), lnd.sum(), 40000))
     if n < 300:
@@ -115,6 +115,9 @@ def main():
     osm_water = rasterize_lonlat(anc.osm_polygons(work, "water"), grid)
     rivers = rasterize_lonlat([g for g, _ in anc.osm_lines(work, "water")], grid, all_touched=True)
     perm = (occ >= thr["permanent_water_occurrence"]) | (lc == LC_WATER) | osm_water
+    # Threshold training sample: only water the 38-year JRC record shows as almost always wet.
+    # (OSM ponds and drains are narrower than a pixel and would bias the sample towards land.)
+    sure_water = occ >= 95 if (occ >= 95).sum() > 2000 else perm
     drainage = perm | rivers
     if drainage.any():
         idx = ndi.distance_transform_edt(~drainage, return_distances=False, return_indices=True)
@@ -127,12 +130,15 @@ def main():
     np.save(out / "permanent_water.npy", perm)
     np.save(out / "hand.npy", hand.astype("float32"))
 
-    dates = [d["date"] for d in cfg["dates"] if (work / "nisar" / f"{d['date']}.npz").exists()]
+    all_dates = [d["date"] for d in cfg["dates"]]
+    dates = [d for d in all_dates if (work / "nisar" / f"{d}.npz").exists()]
     if not dates:
         raise SystemExit("no NISAR subsets in work/nisar - run 02_fetch_subset.py")
     refs = [d for d in cfg.get("reference_dates", dates[:1]) if d in dates]
+    anc_log = json.loads((work / "ancillary.json").read_text(encoding="utf-8")) if (work / "ancillary.json").exists() else {}
     log = {"reference_dates": refs, "permanent_water_km2": round(float(perm.sum() * km2), 2),
            "config_thresholds": thr, "lband": {}, "cband": {}, "optical": {}, "per_date": {}}
+    min_px = thr.get("min_patch_px", 12)
 
     # ----------------------------------------------------------------- L-band (NISAR)
     hh, hv, enl = {}, {}, {}
@@ -143,7 +149,7 @@ def main():
         hv[d] = to_db(lee(z["hv"])[0]) if np.isfinite(z["hv"]).any() else None
         np.save(out / f"lband_db_{d}.npy", hh[d])
     ref_all = reference(hh, "", refs)
-    t_low, why = otsu_water(ref_all, perm, land, -27, -13, thr["open_water_hh_db"], rng)
+    t_low, why = otsu_water(ref_all, sure_water, land, -24, -10, thr["open_water_hh_db"], rng)
     # pass-to-pass noise of the change image, measured between the pre-flood passes themselves
     noise_land, noise_veg = [], []
     for d in refs:
@@ -177,7 +183,7 @@ def main():
                 rv = reference({k: v for k, v in hv.items() if v is not None}, d, refs)
                 if rv is not None:
                     veg &= (delta >= (hv[d] - rv)) | ~np.isfinite(hv[d] - rv)
-            both = drop_small(open_w | veg, thr.get("min_patch_px", 12))
+            both = drop_small(open_w | veg, min_px)
             cls[veg & both] = VEG
             cls[open_w & both] = OPEN
             np.save(out / f"delta_hh_{d}.npy", delta.astype("float32"))
@@ -185,7 +191,7 @@ def main():
         cls[nod] = NODATA
         flood[d] = cls
         np.save(out / f"flood_{d}.npy", cls)
-        log["per_date"][d] = {"open_flood_km2": round(float((cls == OPEN).sum() * km2), 2),
+        log["per_date"][d] = {"source": "nisar", "open_flood_km2": round(float((cls == OPEN).sum() * km2), 2),
                               "veg_flood_km2": round(float((cls == VEG).sum() * km2), 2),
                               "nodata_pct": round(float(nod.mean() * 100), 2),
                               "is_reference": d in refs,
@@ -194,39 +200,66 @@ def main():
               f"{'  (reference pass: this is the false-alarm level)' if d in refs else ''}")
 
     # ----------------------------------------------------------------- C-band (Sentinel-1)
-    cb = {}
-    for d in dates:
-        p = work / "cband" / f"{d}.npy"
-        if p.exists():
-            cb[d] = to_db(lee(np.load(p))[0])
-            np.save(out / f"cband_db_{d}.npy", cb[d])
-    if cb:
-        crefs = [d for d in refs if d in cb]
-        cref = reference(cb, "", crefs)
-        if cref is not None:
-            ct, cwhy = otsu_water(cref, perm, land, -27, -12, thr["open_water_hh_db"], rng)
-            cs = [robust_sigma((cb[d] - reference(cb, d, crefs))[land]) for d in crefs if reference(cb, d, crefs) is not None]
+    # Each acquisition is compared with the pre-event acquisitions on the SAME track.
+    idx_p = work / "cband" / "index.json"
+    chosen = anc_log.get("cband", {}).get("dates", {})
+    copen, cdb = {}, {}
+    c_only = {d["date"] for d in cfg["dates"] if d.get("nisar") is False}
+    if idx_p.exists():
+        index = json.loads(idx_p.read_text(encoding="utf-8"))
+        event = str(cfg.get("event_start", "9999"))
+        log["cband"] = {"polarization": "VV", "speckle_filter": "Lee 5x5 on linear power", "tracks": {}}
+        for track in sorted({a["track"] for a in index}):
+            lst = [a for a in index if a["track"] == track]
+            stack = {a["file"]: to_db(lee(np.load(work / "cband" / a["file"]))[0]) for a in lst}
+            cdb.update(stack)
+            pre = [a["file"] for a in lst if a["time"][:10] < event]
+            cref = reference(stack, "", pre)
+            if cref is None:
+                continue
+            ct, cwhy = otsu_water(cref, sure_water, land, -24, -10, thr["open_water_hh_db"], rng)
+            cs = [robust_sigma((stack[f] - reference(stack, f, pre))[land]) for f in pre if reference(stack, f, pre) is not None]
             cs = float(np.nanmedian(cs)) if cs else float("nan")
             cdrop = max(thr["open_water_drop_db"], 3 * cs) if np.isfinite(cs) else thr["open_water_drop_db"]
-            log["cband"] = {"polarization": "VV", "open_water_db": ct, "open_water_db_source": cwhy,
-                            "noise_sigma_db": round(cs, 2), "open_water_drop_db": round(cdrop, 2)}
-            print(f"C-band: water threshold {ct} dB [{cwhy}], drop {cdrop:.2f} dB")
-            for d in cb:
-                r = reference(cb, d, crefs)
+            log["cband"]["tracks"][track] = {"reference_acquisitions": [a["time"] for a in lst if a["file"] in pre],
+                                             "open_water_db": ct, "open_water_db_source": cwhy,
+                                             "noise_sigma_db": round(cs, 2), "open_water_drop_db": round(cdrop, 2), "acquisitions": {}}
+            print(f"C-band {track}: water threshold {ct} dB [{cwhy}], noise {cs:.2f} dB, drop {cdrop:.2f} dB")
+            for a in lst:
+                r = reference(stack, a["file"], pre)
                 if r is None:
                     continue
-                m = drop_small((cb[d] < ct) & ((cb[d] - r) < -cdrop) & land & low, thr.get("min_patch_px", 12))
-                np.save(out / f"cband_open_{d}.npy", m)
-                log["per_date"][d]["detected_km2"]["cband"] = round(float(m.sum() * km2), 2)
-                # how much of the NISAR under-canopy flood does C-band also flag?
-                v = flood[d] == VEG
-                log["per_date"][d]["cband_sees_pct_of_veg_flood"] = round(float((m & v).sum() / max(v.sum(), 1) * 100), 1)
-                print(f"  {d}: C-band open-water flood {log['per_date'][d]['detected_km2']['cband']} km2")
+                cur = stack[a["file"]]
+                copen[a["file"]] = drop_small((cur < ct) & ((cur - r) < -cdrop) & land & low, min_px)
+                area = round(float(copen[a["file"]].sum() * km2), 2)
+                log["cband"]["tracks"][track]["acquisitions"][a["time"]] = area
+                print(f"  {a['time']}: C-band open-water flood {area} km2{'  (pre-event)' if a['file'] in pre else ''}")
+    for d in all_dates:
+        f = chosen.get(d, {}).get("file")
+        if f not in copen or (d not in log["per_date"] and d not in c_only):
+            continue                                       # a NISAR date whose pass is not published yet is left out
+        np.save(out / f"cband_open_{d}.npy", copen[f])
+        np.save(out / f"cband_db_{d}.npy", cdb[f])
+        if d not in log["per_date"]:
+            # No NISAR pass on this date: the flood raster holds what C-band alone can see (open water).
+            cls = np.zeros(perm.shape, dtype="uint8")
+            cls[copen[f]] = OPEN
+            cls[perm] = PERM
+            cls[~np.isfinite(cdb[f])] = NODATA
+            flood[d] = cls
+            np.save(out / f"flood_{d}.npy", cls)
+            log["per_date"][d] = {"source": "cband", "open_flood_km2": round(float((cls == OPEN).sum() * km2), 2),
+                                  "veg_flood_km2": None, "nodata_pct": round(float((cls == NODATA).mean() * 100), 2),
+                                  "is_reference": False, "detected_km2": {"lband": None}}
+        log["per_date"][d]["detected_km2"]["cband"] = round(float(copen[f].sum() * km2), 2)
+        if log["per_date"][d]["source"] == "nisar":
+            v = flood[d] == VEG
+            log["per_date"][d]["cband_sees_pct_of_veg_flood"] = round(float((copen[f] & v).sum() / max(v.sum(), 1) * 100), 1)
 
     # ----------------------------------------------------------------- optical (HLS)
-    for d in dates:
+    for d in all_dates:
         p = work / "optical" / f"{d}.npz"
-        if not p.exists():
+        if not p.exists() or d not in log["per_date"]:
             continue
         z = np.load(p)
         fm, rgbn = z["fmask"], z["rgb"]
@@ -240,14 +273,16 @@ def main():
             water = clear & (ndwi > 0.0) & np.isfinite(ndwi)
         else:
             water = clear & ((fm & 0b00100000) > 0)
-        m = drop_small(water & land & low, thr.get("min_patch_px", 12))
+        m = drop_small(water & land & low, min_px)
         np.save(out / f"optical_water_{d}.npy", m)
+        np.save(out / f"optical_clear_{d}.npy", clear)
         log["per_date"][d]["detected_km2"]["optical"] = round(float(m.sum() * km2), 2)
         log["per_date"][d]["optical_cloud_pct"] = round(float(cloud.sum() / max(valid.sum(), 1) * 100), 1)
         print(f"  {d}: optical sees {log['per_date'][d]['detected_km2']['optical']} km2 of non-permanent water, "
               f"cloud/shadow {log['per_date'][d]['optical_cloud_pct']}%")
     log["optical"] = {"rule": "NDWI (green, NIR) > 0 on HLS pixels that Fmask marks free of cloud, cloud-adjacent and shadow; "
                               "permanent water removed"}
+    log["dates"] = [d for d in all_dates if d in log["per_date"]]
     write_json(out / "detect.json", log)
     print(f"wrote {out / 'detect.json'}")
 

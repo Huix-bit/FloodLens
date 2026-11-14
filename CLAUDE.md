@@ -58,8 +58,16 @@ Videos may be narrated in another language only with English subtitles.
 ## 1. What we are building
 
 A browser-based, game-like **first-person drone (FPV) flight** over a real Malaysian flood zone
-(case study: late-November 2025 floods, Kelantan / Terengganu, ~20 × 20 km area of interest
-containing a river, a town and oil-palm plantations).
+(case study: **Kuala Selangor floods, November 2026**, ~20 × 20 km area of interest around Ijok /
+Bukit Rotan / Jeram containing Sungai Selangor, towns and oil-palm estates).
+
+> Case study changed on 2026-11-14. The original plan (Kelantan / Terengganu, late November 2025)
+> is impossible: NASA's catalogue has no NISAR L2 GCOV over Peninsular Malaysia before
+> 2026-06-21. NISAR track 112 ascending covers Kuala Selangor with pre-flood passes on 25 Sep,
+> 7 Oct, 19 Oct and 31 Oct 2026 and a flood pass on 12 Nov 2026 whose L2 product NASA had not yet
+> published on 14 Nov. Until it is, the build must say so on screen (see `pipeline/validation.md`).
+> To add it: run `pipeline/01_search_nisar.py`, then steps 02, 04 (`--only cband,optical,rain`),
+> 03, 05, 06.
 
 **Core mechanic: "swing your head to change which satellite's eyes you see with."**
 

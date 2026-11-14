@@ -100,7 +100,7 @@ def main() -> int:
             km2 = (man["grid"]["pixel_m"] / 1000) ** 2
             for code, key in ((2, "open_flood_km2"), (3, "veg_flood_km2")):
                 got = float((fl[..., 0] == code).sum() * km2)
-                if key in st and abs(got - st[key]) > 0.05 + 0.02 * got:
+                if st.get(key) is not None and abs(got - st[key]) > 0.05 + 0.02 * got:
                     err(f"stats[{d['date']}].{key}={st[key]} but raster gives {got:.2f}")
     if dates != sorted(dates):
         err("dates are not in chronological order")

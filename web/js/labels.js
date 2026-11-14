@@ -7,17 +7,20 @@ export function initLabels({ geo, terrain, places, camera }) {
   const items = (places?.features || []).filter(f => f.geometry?.type === 'Point' && f.properties?.name).map(f => {
     const [x, z] = geo.lonLatToWorld(...f.geometry.coordinates);
     const el = document.createElement('div');
-    const town = f.properties.place === 'town' || f.properties.place === 'city';
-    el.className = 'place' + (town ? ' town' : '');
+    const kind = f.properties.place;
+    const town = kind === 'town' || kind === 'city', relief = kind === 'relief_centre';
+    el.className = 'place' + (town ? ' town' : '') + (relief ? ' relief' : '');
     el.textContent = f.properties.name;
     host.appendChild(el);
-    return { el, town, p: new THREE.Vector3(x, terrain.groundAt(x, z) + 14, z) };
+    // How far away a label stays visible (world units; 1 unit = 5 m). Small places only show up close.
+    const reach = town || relief ? 3200 : kind === 'village' ? 1500 : 520;
+    return { el, reach, p: new THREE.Vector3(x, terrain.groundAt(x, z) + 14, z) };
   });
   const v = new THREE.Vector3();
 
   return function update() {
     for (const it of items) {
-      const dist = it.p.distanceTo(camera.position), reach = it.town ? 3200 : 1500;
+      const dist = it.p.distanceTo(camera.position), reach = it.reach;
       v.copy(it.p).project(camera);
       const show = v.z < 1 && v.z > -1 && Math.abs(v.x) < 1.05 && Math.abs(v.y) < 1.05 && dist < reach;
       if (!show) { it.el.style.opacity = 0; continue; }

@@ -19,22 +19,26 @@ import { closeModals, initModals, openModal } from './modals.js';
 
 const status = msg => { $('loadMsg').textContent = msg; };
 
-/** Date with the largest L-band flood: the app opens on the most dramatic pass. */
+/** Opening pass: the one the manifest names, else the largest detected flood, else the latest pass. */
 function peakDate(man, stats) {
-  let best = 0, max = -1;
+  const named = man.dates.findIndex(d => d.date === man.default_date);
+  if (named >= 0) return named;
+  let best = man.dates.length - 1, max = 2;            // below 2 km² nothing stands out: open on the latest pass
   man.dates.forEach((d, i) => {
-    const v = stats.per_date?.[d.date]?.detected_km2?.lband ?? 0;
+    const det = stats.per_date?.[d.date]?.detected_km2 || {};
+    const v = Math.max(det.lband ?? 0, det.cband ?? 0);
     if (v > max) { max = v; best = i; }
   });
   return best;
 }
 
 /** Stable opening shot: above the top-ranked exposure hexagon (or the first town), looking at it. */
-function homePose(geo, terrain, hexes, places, date) {
+function homePose(geo, terrain, hexes, places, date, named) {
   let target = [0, 0];
   const top = hexes?.features?.find(f => f.properties.rank?.[date] === 1);
   const town = places?.features?.find(f => f.properties.place === 'town') || places?.features?.[0];
-  if (top) {
+  if (Array.isArray(named) && named.length === 2) target = geo.lonLatToWorld(named[0], named[1]);
+  else if (top) {
     const ring = top.geometry.coordinates[0].slice(0, -1);
     target = geo.lonLatToWorld(ring.reduce((s, p) => s + p[0], 0) / ring.length, ring.reduce((s, p) => s + p[1], 0) / ring.length);
   } else if (town) target = geo.lonLatToWorld(...town.geometry.coordinates);
@@ -69,6 +73,12 @@ async function boot() {
   status('reading manifest');
   const man = await loadManifest();
   $('startSim').hidden = !man.simulated;
+  if (!man.simulated) {
+    const real = man.dates.filter(d => d.flood_source !== 'cband' && !d.lband_pending).length;
+    const pend = (man.pending_passes || []).map(p => p.note).join(' ');
+    $('startReal').hidden = false;
+    $('startReal').textContent = `Real satellite data: ${man.title}. ${real} NISAR passes, with Sentinel-1 and HLS images of the same days. ${pend}`;
+  }
   const geo = makeGeo(man);
   let done = 0;
   const stat = await loadStatic(() => status(`loading terrain ${++done}/6`));
@@ -99,7 +109,7 @@ async function boot() {
   const vegetation = createVegetation(ctx);
   createBuildings(ctx);
 
-  state.home = homePose(geo, terrain, stat.hexes, stat.places, man.dates[peakDate(man, stat.stats)].date);
+  state.home = homePose(geo, terrain, stat.hexes, stat.places, man.dates[peakDate(man, stat.stats)].date, man.home_lonlat);
   applyPose(hash.pose || state.home);
 
   const setLens = onOff => {
