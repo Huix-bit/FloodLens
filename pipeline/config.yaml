@@ -1,34 +1,49 @@
-# FloodLens pipeline configuration.
+# FloodLens pipeline configuration - the real case study.
 # A new area of interest = a new copy of this file (pass it with --config).
 # Nothing below is hard-coded in the scripts or in the web app.
 
-title: "Kelantan floods, Nov-Dec 2025"
+title: "Kuala Selangor floods, November 2026"
 
 aoi:
-  # Centre of the area of interest (WGS84). Near Kuala Krai, Sungai Kelantan.
-  center_lon: 102.20
-  center_lat: 5.53
+  # Centre of the area of interest (WGS84): Ijok / Bukit Rotan / Jeram, Kuala Selangor district,
+  # Selangor, Malaysia. Chosen because the relief centres opened for this flood (Parit Mahang,
+  # Bukit Kuching, Bukit Cherakah, Ijok, Tanjung Siam) sit inside it, together with Sungai
+  # Selangor, Sungai Buloh and large oil-palm estates.
+  center_lon: 101.35
+  center_lat: 3.30
   # Output grid. width * pixel_m = extent in metres (1024 * 20 m = 20.48 km).
   width: 1024
   height: 1024
   pixel_m: 20
   # UTM zone is derived from center_lon unless set here (EPSG:326xx north / 327xx south).
-  epsg: 32648
+  epsg: 32647
 
-# One entry per NISAR pass on ONE track/direction (12-day repeat).
+# One entry per NISAR pass on ONE track/direction (12-day repeat), UTC acquisition dates.
 # The web app reads the number of dates from manifest.json - add or remove freely.
+# 01_search_nisar.py lists what NASA has actually published; a date listed here without a
+# published granule is skipped with a warning.
 dates:
-  - { date: "2025-11-14", label: "Before" }
-  - { date: "2025-11-26", label: "Peak flood" }
-  - { date: "2025-12-08", label: "Receding" }
-  - { date: "2025-12-20", label: "Recovery" }
+  - { date: "2026-09-25", label: "Baseline" }
+  - { date: "2026-10-07", label: "Baseline" }
+  - { date: "2026-10-19", label: "Baseline" }
+  - { date: "2026-10-31", label: "Before flood" }
+  - { date: "2026-11-12", label: "Flood" }
+
+# Dates used as the "dry" reference for change detection (all must be before the flood).
+reference_dates: ["2026-09-25", "2026-10-07", "2026-10-19", "2026-10-31"]
 
 nisar:
-  search_start: "2025-11-01"
-  search_end: "2025-12-20"
+  search_start: "2026-09-20"
+  search_end: "2026-11-20"
   product: "GCOV"
-  track: null          # filled in after 01_search_nisar.py picks one track
-  direction: null      # ASCENDING | DESCENDING
+  # NASA CMR collections, newest processing level first.
+  collections:
+    - { short_name: "NISAR_L2_GCOV_V1", concept_id: "C3622241360-ASF" }
+    - { short_name: "NISAR_L2_GCOV_PROVISIONAL_V1", concept_id: "C2854338529-ASF" }
+    - { short_name: "NISAR_L2_GCOV_BETA_V1", concept_id: "C3622214170-ASF" }
+  track: 112           # one look geometry for the whole timeline
+  direction: "ASCENDING"
+  frequency: "A"       # frequencyA = the wide-bandwidth (40 MHz here) L-band channel
 
 # Display stretch used when writing the 8-bit backscatter PNGs (documented in README).
 stretch_db:
@@ -43,6 +58,7 @@ thresholds:
   flooded_veg_rise_db: 3.0       # HH increase over tree / palm land cover
   permanent_water_occurrence: 80 # JRC GSW occurrence (%) treated as permanent water
   max_hand_m: 15.0               # ignore detections higher than this above nearest drainage
+  min_patch_px: 12               # drop detections smaller than this many connected pixels
 
 exposure:
   hex_flat_to_flat_m: 1000
@@ -52,10 +68,3 @@ exposure:
 paths:
   work_dir: "pipeline/work"      # raw + intermediate files (git-ignored)
   web_data: "web/data"
-
-# Used only by 00_mock_data.py
-mock:
-  seed: 20251126
-  flood_stage_m: [0.05, 3.9, 2.5, 0.9]     # water stage above the river, one per date
-  cloud_fraction: [0.06, 0.88, 0.45, 0.18] # optical cloud cover target, one per date
-  rain_mm_prev7d: [42.0, 486.0, 131.0, 58.0]

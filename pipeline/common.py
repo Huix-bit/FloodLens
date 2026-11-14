@@ -171,3 +171,72 @@ def write_json(path: Path, obj, compact: bool = False) -> None:
         else:
             json.dump(obj, fh, indent=2, ensure_ascii=False)
             fh.write("\n")
+
+
+# --------------------------------------------------------------------------- real-data helpers
+# (rasterio / pyproj are imported lazily so the mock step keeps running on numpy alone)
+def work_dir(cfg: dict) -> Path:
+    p = ROOT / cfg["paths"]["work_dir"]
+    p.mkdir(parents=True, exist_ok=True)
+    return p
+
+
+def grid_transform(grid: Grid):
+    from rasterio.transform import from_origin
+    return from_origin(grid.xmin, grid.ymax, grid.pixel_m, grid.pixel_m)
+
+
+def warp_to_grid(src, src_transform, src_crs, grid: Grid, resampling: str = "bilinear",
+                 src_nodata=None, dst_nodata=np.nan, dtype="float32"):
+    """Resample a 2-D array from any CRS onto the shared AOI grid."""
+    from rasterio.enums import Resampling
+    from rasterio.warp import reproject
+    dst = np.full((grid.height, grid.width), dst_nodata, dtype=dtype)
+    reproject(source=src, destination=dst, src_transform=src_transform, src_crs=src_crs,
+              dst_transform=grid_transform(grid), dst_crs=f"EPSG:{grid.epsg}",
+              resampling=Resampling[resampling], src_nodata=src_nodata, dst_nodata=dst_nodata)
+    return dst
+
+
+def read_to_grid(path: str, grid: Grid, resampling: str = "bilinear", band: int = 1,
+                 margin_px: int = 8, dst_nodata=np.nan, dtype="float32", src_nodata="file"):
+    """Read only the AOI window of a (possibly remote, /vsicurl/) raster and warp it to the grid."""
+    import rasterio
+    from rasterio.warp import transform_bounds
+    from rasterio.windows import Window, from_bounds
+    with rasterio.open(path) as ds:
+        b = transform_bounds(f"EPSG:{grid.epsg}", ds.crs, *grid.bbox_utm, densify_pts=21)
+        win = from_bounds(*b, transform=ds.transform)
+        c0 = max(0, int(win.col_off) - margin_px)
+        r0 = max(0, int(win.row_off) - margin_px)
+        c1 = min(ds.width, int(win.col_off + win.width) + margin_px + 1)
+        r1 = min(ds.height, int(win.row_off + win.height) + margin_px + 1)
+        if c1 <= c0 or r1 <= r0:
+            return None
+        win = Window(c0, r0, c1 - c0, r1 - r0)
+        arr = ds.read(band, window=win)
+        nod = ds.nodata if src_nodata == "file" else src_nodata
+        return warp_to_grid(arr, ds.window_transform(win), ds.crs, grid, resampling,
+                            src_nodata=nod, dst_nodata=dst_nodata, dtype=dtype)
+
+
+def rasterize_lonlat(geoms, grid: Grid, all_touched: bool = False):
+    """Burn shapely geometries given in lon/lat onto the grid. Returns a bool mask."""
+    from rasterio.features import rasterize
+    from shapely.ops import transform as shp_transform
+    proj = [shp_transform(lambda x, y, z=None: lonlat_to_utm(x, y, grid.epsg), g) for g in geoms]
+    proj = [g for g in proj if not g.is_empty]
+    if not proj:
+        return np.zeros((grid.height, grid.width), dtype=bool)
+    return rasterize(((g, 1) for g in proj), out_shape=(grid.height, grid.width),
+                     transform=grid_transform(grid), fill=0, all_touched=all_touched, dtype="uint8").astype(bool)
+
+
+def earthdata_login():
+    """Log in to NASA Earthdata from ~/.netrc (never from code or config). Returns None if absent."""
+    import earthaccess
+    try:
+        auth = earthaccess.login(strategy="netrc")
+        return earthaccess if auth and auth.authenticated else None
+    except Exception:
+        return None

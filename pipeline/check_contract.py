@@ -24,7 +24,7 @@ HEX_KEYS = ["id", "name", "flood_frac", "people", "roads_km", "facilities", "sco
 
 
 def main() -> int:
-    data = ROOT / load_config()["paths"]["web_data"]
+    data = ROOT / load_config(sys.argv[1] if len(sys.argv) > 1 else None)["paths"]["web_data"]
     errors: list[str] = []
     err = errors.append
 

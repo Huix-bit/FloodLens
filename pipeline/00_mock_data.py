@@ -5,7 +5,7 @@ clouds, buildings, places). It exists so the frontend never waits for real data,
 contract can be tested end to end. manifest.json carries "simulated": true and the app shows
 a SIMULATED badge. The real pipeline (01-06) overwrites these files with the same names.
 
-Run from the repo root:   python pipeline/00_mock_data.py [--config pipeline/config.yaml]
+Run from the repo root:   python pipeline/00_mock_data.py [--config pipeline/config.mock.yaml]
 """
 from __future__ import annotations
 
@@ -446,7 +446,7 @@ def save(arr, path, mode=None):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("--config", default=None)
+    ap.add_argument("--config", default=str(ROOT / "pipeline" / "config.mock.yaml"))
     args = ap.parse_args()
     cfg = load_config(args.config)
     grid = grid_from_config(cfg)
