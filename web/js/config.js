@@ -4,19 +4,19 @@ export const UNIT_M = 5;   // metres per world unit (horizontal)
 export const V_EXAG = 2;   // vertical exaggeration of terrain (labelled in the legend)
 
 export const MODES = [
-  { key: 'optical', name: 'OPTICAL EYE', short: 'OPTICAL', acc: '#ffd166',
-    sub: 'What an optical satellite sees · true colour, clouds included' },
-  { key: 'cband', name: 'C-BAND RADAR', short: 'C-BAND', acc: '#8ecbff',
-    sub: 'Sentinel-1 · 5.6 cm waves · through cloud, not under trees' },
-  { key: 'lband', name: 'L-BAND · NISAR', short: 'L-BAND·NISAR', acc: '#00ffd0',
-    sub: '24 cm waves pass the canopy · flooded palms light up' },
+  { key: 'optical', name: 'OPTICAL EYE', label: 'Optical', band: 'visible light · HLS', short: 'Optical', acc: '#ffd166',
+    sub: 'True colour, as an optical satellite sees it. Clouds included.' },
+  { key: 'cband', name: 'C-BAND RADAR', label: 'C-band radar', band: '5.6 cm · Sentinel-1', short: 'C-band', acc: '#8ecbff',
+    sub: 'Sees through cloud and rain, but stops at the tree canopy.' },
+  { key: 'lband', name: 'L-BAND · NISAR', label: 'L-band radar', band: '24 cm · NISAR', short: 'L-band NISAR', acc: '#00ffd0',
+    sub: 'Passes the canopy. Flooded palms light up by double bounce.' },
 ];
 export const LBAND = 2;
 
-export const LANDCOVER = ['OTHER / BARE', 'PERMANENT WATER', 'URBAN', 'OIL PALM / TREE CROP', 'CROPLAND / GRASS', 'FOREST'];
+export const LANDCOVER = ['Other / bare', 'Permanent water', 'Urban', 'Oil palm / tree crop', 'Cropland / grass', 'Forest'];
 export const LC = { OTHER: 0, WATER: 1, URBAN: 2, PALM: 3, CROP: 4, FOREST: 5 };
 export const FLOOD = { DRY: 0, PERM: 1, OPEN: 2, VEG: 3, NODATA: 255 };
-export const FLOOD_NAME = { 0: 'DRY', 1: 'PERMANENT WATER', 2: 'OPEN-WATER FLOOD', 3: 'FLOODED VEGETATION', 255: 'NO DATA' };
+export const FLOOD_NAME = { 0: 'dry', 1: 'permanent water', 2: 'open-water flood', 3: 'flooded vegetation', 255: 'no data' };
 export const COLORS = { open: '#2b70ff', veg: '#00ffd0' };
 export const DEFAULT_STRETCH_DB = [-25, 0];
 

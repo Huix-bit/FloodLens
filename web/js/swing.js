@@ -14,6 +14,12 @@ export function swing(dir) {
   restart($('wipe'), dir > 0 ? 'r' : 'l');
 }
 
+/** Swing towards a specific sensor (used by the on-screen selector). */
+export function swingTo(k) {
+  if (k === state.mode) return;
+  swing((k - state.mode + MODES.length) % MODES.length === 1 ? 1 : -1);
+}
+
 export function setMode(m) {
   state.mode = (m + MODES.length) % MODES.length;
   emit('mode', state.mode);

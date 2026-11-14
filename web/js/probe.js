@@ -65,18 +65,18 @@ export function initProbe({ man, geo, land, terrain }) {
 
   return function update() {
     const data = getDate(state.dateIdx), at = hit(), el = $('target');
-    if (!data || !at) { el.textContent = '▸ no ground under crosshair'; sctx.clearRect(0, 0, spark.width, spark.height); return; }
+    if (!data || !at) { el.textContent = 'No ground under the crosshair'; sctx.clearRect(0, 0, spark.width, spark.height); return; }
     const [fc, fr] = geo.worldToPx(at[0], at[1]);
     const col = Math.max(0, Math.min(w - 1, fc | 0)), row = Math.max(0, Math.min(h - 1, fr | 0)), i = row * w + col;
     const [lon, lat] = geo.worldToLonLat(at[0], at[1]);
     const where = `${Math.abs(lat).toFixed(4)}°${lat >= 0 ? 'N' : 'S'} ${Math.abs(lon).toFixed(4)}°${lon >= 0 ? 'E' : 'W'}`;
-    const parts = [where, LANDCOVER[land[i]] || 'UNKNOWN'];
+    const parts = [where, LANDCOVER[land[i]] || 'Unknown'];
     if (state.mode === 1) parts.push(`C ${meanDb(data.cbandR, col, row, stretch.c).toFixed(1)} dB`);
     if (state.mode === 2) parts.push(`L-HH ${meanDb(data.lbandR, col, row, stretch.l).toFixed(1)} dB`);
     const f = data.flood[i];
-    if (f === FLOOD.VEG && state.mode !== 2) parts.push('LOOKS DRY TO THIS SENSOR');
+    if (f === FLOOD.VEG && state.mode !== 2) parts.push('looks dry to this sensor');
     else if (f !== FLOOD.DRY) parts.push((f === FLOOD.OPEN || f === FLOOD.VEG ? 'NISAR: ' : '') + FLOOD_NAME[f]);
-    el.textContent = '▸ ' + parts.join(' · ');
+    el.textContent = parts.join(' · ');
     drawSpark(col, row);
   };
 }

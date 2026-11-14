@@ -9,7 +9,7 @@ import { createVegetation } from './vegetation.js';
 import { createBuildings } from './buildings.js';
 import { createAtmosphere } from './atmosphere.js';
 import { initControls } from './controls.js';
-import { setMode, updateSwing } from './swing.js';
+import { setMode, swingTo, updateSwing } from './swing.js';
 import { initTimeline, setDate, stepDate, togglePlay, updateTimeline } from './timeline.js';
 import { cycleView, initHud, renderReadouts, toast } from './hud.js';
 import { initMinimap } from './minimap.js';
@@ -107,7 +107,7 @@ async function boot() {
     const lensMode = state.mode === 2 ? 0 : 2;       // looking through L-band already? lens shows optical
     terrain.setLens(onOff, lensMode);
     $('lensRing').classList.toggle('on', onOff);
-    $('lensRing').firstElementChild.textContent = lensMode === 2 ? 'NISAR L-BAND LENS' : 'OPTICAL LENS';
+    $('lensRing').firstElementChild.textContent = lensMode === 2 ? 'NISAR L-band lens' : 'Optical lens';
     $('lensRing').style.borderColor = MODES[lensMode].acc;
   };
   const actions = {
@@ -119,7 +119,7 @@ async function boot() {
   };
 
   on('mode', m => { terrain.setMode(m); if (state.lens) setLens(true); });
-  initHud(ctx); initTimeline(ctx); initModals(man);
+  initHud(ctx, { swingTo }); initTimeline(ctx); initModals(man);
   const updateControls = initControls({ canvas, geo, terrain, actions });
   const drawMini = initMinimap(ctx), updateProbe = initProbe(ctx), updateLabels = initLabels(ctx);
   setMode(hash.mode ?? 0);
@@ -154,10 +154,10 @@ async function boot() {
   requestAnimationFrame(frame);
 
   const go = $('go');
-  go.disabled = false; go.textContent = 'START MISSION'; status('');
+  go.disabled = false; go.textContent = 'Start flight'; status('');
   go.addEventListener('click', () => {
-    $('start').hidden = true; state.started = true;
-    toast('Swing right (E or flick) → see through the cloud');
+    $('start').hidden = true; state.started = true; document.body.classList.add('started');
+    toast('Swing right with E, or flick, to see through the cloud');
   });
 
   // Remaining passes load in the background so the first frame is never held up.
@@ -174,5 +174,5 @@ boot().catch(err => {
   const el = $('startErr');
   el.hidden = false;
   el.textContent = `Could not start: ${err.message}. Serve the web/ folder over HTTP (python -m http.server) and check data/manifest.json.`;
-  $('go').textContent = 'ERROR';
+  $('go').textContent = 'Could not start';
 });

@@ -96,11 +96,23 @@ UI language: **English only.**
 
 ### Visual reference
 `reference/prototype.html` is a working single-file prototype with simulated data (Three.js r128).
-Reuse its look and interaction feel: HUD panels with corner brackets, Chakra Petch + JetBrains Mono
-fonts, accent colour per mode (optical `#ffd166`, C-band `#8ecbff`, L-band `#00ffd0`), radar
-scanlines, swing wipe, rain + fog in optical mode at cloudy dates, wireframe/transparent palm
-crowns and bright trunks in L-band mode. The new build replaces procedural terrain/flood with the
-real data files described below.
+Reuse its **interaction feel and scene treatment only**: accent colour per mode (optical `#ffd166`,
+C-band `#8ecbff`, L-band `#00ffd0`), radar scanlines, swing wipe, rain + fog in optical mode at
+cloudy dates, wireframe/transparent palm crowns and bright trunks in L-band mode. The new build
+replaces procedural terrain/flood with the real data files described below.
+
+**Do NOT copy the prototype's panel styling** (decided 2026-11-14: it read as generic AI sci-fi).
+The interface follows a flight-instrument language instead, defined in `web/css/style.css`:
+- Flat opaque surfaces, square corners, 1 px hairline rules. No blur, glow, gradients, rounded
+  cards or corner brackets. No wide-tracked all-caps labels; use sentence case.
+- Type: B612 + B612 Mono (the Airbus cockpit typeface).
+- Data that belongs to the view (heading tape, altitude, crosshair probe, place names) is drawn
+  straight onto the scene like an FPV on-screen display; everything else lives in the docked
+  bottom console (sensor comparison, time axis of passes with flood columns, pass facts, key).
+- Sensor choice is a three-segment selector at top centre; the active segment is filled with the
+  mode colour. Mode colours are used only for the active sensor, key numbers and map swatches.
+- Real instrument conventions: compass tape, scale bar and north mark on the minimap, a time axis
+  where passes sit at their true dates.
 
 ### Honesty rules (judges check this)
 - Anything drawn from data must come from the files in `web/data/`. Purely visual effects (rain,

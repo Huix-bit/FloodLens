@@ -6,15 +6,31 @@ import { toast } from './hud.js';
 const FADE_S = 1.6, PLAY_EVERY_MS = 3400;
 let man, terrain, stats, request = 0, playTimer = null;
 
+const DAY = { day: 'numeric', month: 'short', timeZone: 'UTC' };
+const dayOf = t => new Date(t).toLocaleDateString('en-GB', DAY);
+
+/** A real time axis: each pass sits where its date falls, with a column showing how much was flooded. */
 function renderChips() {
-  const peak = Math.max(0.01, ...man.dates.map(d => stats.per_date?.[d.date]?.detected_km2?.lband ?? 0));
-  $('chips').innerHTML = man.dates.map((d, k) => {
-    const km2 = stats.per_date?.[d.date]?.detected_km2?.lband ?? 0;
-    const key = k < 9 ? `${k + 1} · ` : '';
-    return `<button class="chip ${k === state.dateIdx ? 'on' : ''}" data-k="${k}" title="${km2.toFixed(1)} km² flooded (L-band)">`
-      + `${key}${d.label}<small>${d.date}</small><span class="w"><i style="width:${km2 / peak * 100}%"></i></span></button>`;
+  const n = man.dates.length;
+  const times = man.dates.map(d => Date.parse(d.date + 'T00:00:00Z'));
+  const dated = times.every(Number.isFinite), t0 = Math.min(...times), span = Math.max(...times) - t0;
+  const per = man.dates.map(d => stats.per_date?.[d.date] || {});
+  const peak = Math.max(0.01, ...per.map(s => (s.open_flood_km2 ?? 0) + (s.veg_flood_km2 ?? 0)));
+  const el = $('chips');
+  el.classList.toggle('dense', n > 6);
+  el.innerHTML = man.dates.map((d, k) => {
+    const open = per[k].open_flood_km2 ?? 0, veg = per[k].veg_flood_km2 ?? 0;
+    const frac = n < 2 ? 0.5 : dated && span > 0 ? (times[k] - t0) / span : k / (n - 1);
+    return `<button class="chip ${k === state.dateIdx ? 'on' : ''}" data-k="${k}" style="left:${8 + frac * 84}%"`
+      + ` title="${d.date}: ${(open + veg).toFixed(1)} km² flooded, ${veg.toFixed(1)} km² of it under canopy">`
+      + `<span class="col"><i class="veg" style="height:${veg / peak * 100}%"></i><i class="open" style="height:${open / peak * 100}%"></i></span>`
+      + `<span class="tick"></span><b>${dated ? dayOf(times[k]) : d.date}</b>`
+      + `<small>${k < 9 ? `${k + 1} · ` : ''}${d.label}</small></button>`;
   }).join('');
-  $('chips').querySelector('.chip.on')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  if (dated) {
+    const year = t => new Date(t).getUTCFullYear(), last = t0 + span;
+    $('tlTitle').textContent = `Satellite passes · ${dayOf(t0)}${year(t0) !== year(last) ? ' ' + year(t0) : ''} to ${dayOf(last)} ${year(last)}`;
+  }
 }
 
 export async function setDate(k, { quiet = false } = {}) {
@@ -39,7 +55,7 @@ export function togglePlay(force) {
   const play = force ?? !playTimer;
   clearInterval(playTimer); playTimer = null;
   if (play) playTimer = setInterval(() => setDate((state.dateIdx + 1) % man.dates.length), PLAY_EVERY_MS);
-  $('play').classList.toggle('on', play); $('play').textContent = play ? '❚❚' : '▶';
+  $('play').textContent = play ? 'Pause' : 'Play';
   return play;
 }
 

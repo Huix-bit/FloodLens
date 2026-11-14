@@ -49,6 +49,12 @@ export function initMinimap({ man, geo, places }) {
     emit('moved');
   });
 
+  // Scale bar: the largest round distance that fits in 40% of the map width.
+  const extentKm = man.grid.width * man.grid.pixel_m / 1000;
+  const barKm = [50, 20, 10, 5, 2, 1, 0.5].find(v => v <= extentKm * 0.4) || 0.5;
+  $('scaleBar').style.width = (barKm / extentKm * 100).toFixed(1) + '%';
+  $('scaleLbl').textContent = `${barKm} km`;
+
   function label(text, x, y) {
     ctx.strokeText(text, x, y); ctx.fillText(text, x, y);
   }
@@ -56,13 +62,12 @@ export function initMinimap({ man, geo, places }) {
   return function draw() {
     const s = mini.width;
     ctx.drawImage(base, 0, 0, s, s);
-    ctx.font = '600 15px JetBrains Mono, monospace'; ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,0,0,.75)';
+    ctx.font = '700 15px "B612 Mono", monospace'; ctx.lineWidth = 4; ctx.strokeStyle = '#000'; ctx.lineJoin = 'round';
     for (const p of dots) {
       ctx.fillStyle = '#fff';
-      ctx.beginPath(); ctx.arc(p.u * s, p.v * s, p.town ? 5 : 2.5, 0, 6.283); ctx.fill();
-      if (p.town) label(p.name.toUpperCase(), Math.min(s - 150, p.u * s + 9), p.v * s + 5);
+      ctx.beginPath(); ctx.arc(p.u * s, p.v * s, p.town ? 5 : 2.5, 0, 6.283); ctx.stroke(); ctx.fill();
+      if (p.town) label(p.name, Math.min(s - 140, p.u * s + 10), p.v * s + 5);
     }
-    label('N', s / 2 - 5, 18);
     const px = (state.pos.x + geo.W / 2) / geo.W * s, py = (state.pos.z + geo.H / 2) / geo.H * s;
     ctx.save();
     ctx.translate(px, py); ctx.rotate(Math.atan2(-Math.cos(state.yaw), -Math.sin(state.yaw)));
