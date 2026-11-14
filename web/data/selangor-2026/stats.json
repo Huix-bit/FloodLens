@@ -10,6 +10,8 @@
       },
       "is_reference": true,
       "flood_source": "nisar",
+      "lband_only_km2": 0.47,
+      "cband_only_km2": 0.01,
       "people_exposed": 34,
       "roads_flooded_km": 0.9,
       "facilities_affected": 0
@@ -24,6 +26,8 @@
       },
       "is_reference": true,
       "flood_source": "nisar",
+      "lband_only_km2": 0.01,
+      "cband_only_km2": 0.0,
       "people_exposed": 3,
       "roads_flooded_km": 0.0,
       "facilities_affected": 0
@@ -38,6 +42,8 @@
       },
       "is_reference": true,
       "flood_source": "nisar",
+      "lband_only_km2": 0.08,
+      "cband_only_km2": 0.01,
       "people_exposed": 8,
       "roads_flooded_km": 0.2,
       "facilities_affected": 0
@@ -46,12 +52,14 @@
       "open_flood_km2": 0.01,
       "veg_flood_km2": 0.18,
       "detected_km2": {
-        "optical": 0.03,
+        "optical": 0.0,
         "cband": 0.01,
         "lband": 0.19
       },
       "is_reference": true,
       "flood_source": "nisar",
+      "lband_only_km2": 0.19,
+      "cband_only_km2": 0.01,
       "people_exposed": 10,
       "roads_flooded_km": 0.4,
       "facilities_affected": 0
@@ -66,6 +74,8 @@
       },
       "is_reference": false,
       "flood_source": "cband",
+      "lband_only_km2": null,
+      "cband_only_km2": null,
       "people_exposed": 11,
       "roads_flooded_km": 0.0,
       "facilities_affected": 0

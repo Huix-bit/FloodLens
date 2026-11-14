@@ -261,6 +261,9 @@ def main():
                                   "is_reference": False, "detected_km2": {"lband": None}}
         log["per_date"][d]["detected_km2"]["cband"] = round(float(copen[f].sum() * km2), 2)
         if log["per_date"][d]["source"] == "nisar":
+            both = (flood[d] == OPEN) | (flood[d] == VEG)
+            log["per_date"][d]["lband_only_km2"] = round(float((both & ~copen[f]).sum() * km2), 2)
+            log["per_date"][d]["cband_only_km2"] = round(float((copen[f] & ~both).sum() * km2), 2)
             v = flood[d] == VEG
             log["per_date"][d]["cband_sees_pct_of_veg_flood"] = round(float((copen[f] & v).sum() / max(v.sum(), 1) * 100), 1)
 
@@ -272,7 +275,7 @@ def main():
         z = np.load(p)
         fm, rgbn = z["fmask"], z["rgb"]
         valid = fm != 255
-        cloud = ((fm & 0b00001110) > 0) & valid                      # cloud, adjacent to cloud, cloud shadow
+        cloud = ((fm & 0b00011110) > 0) & valid                      # cloud, adjacent, shadow, and "snow/ice" (bright cloud is often mislabelled so)
         clear = valid & ~cloud
         if rgbn.shape[0] >= 4:
             g, nir = rgbn[1], rgbn[3]

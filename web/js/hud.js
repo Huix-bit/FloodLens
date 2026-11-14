@@ -70,7 +70,9 @@ function renderStats() {
   } else {
     $('note').innerHTML = total < 0.05
       ? '<div class="callout none"><b>0</b><span>No flood on this pass,<br>only permanent water.</span></div>'
-      : `<div class="callout"><b>+${fmt(hidden)}</b><span>km² hidden under canopy.<br>${Math.round(hidden / total * 100)}% of the flood, seen only by L-band.</span></div>`;
+      : s.lband_only_km2 != null
+        ? `<div class="callout"><b>+${fmt(s.lband_only_km2)}</b><span>km² flagged by L-band but not by C-band.<br>${fmt(hidden)} km² of the flood is under tree cover.</span></div>`
+        : `<div class="callout"><b>+${fmt(hidden)}</b><span>km² hidden under canopy.<br>${Math.round(hidden / total * 100)}% of the flood, seen only by L-band.</span></div>`;
   }
   $('passKv').innerHTML =
     `<span>Cloud cover</span><span>${fmt(d.optical_cloud_pct, 0)}%</span>`

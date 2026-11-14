@@ -17,7 +17,7 @@ import { initProbe } from './probe.js';
 import { initLabels } from './labels.js';
 import { closeModals, initModals, openModal } from './modals.js';
 import { initReport } from './report.js';
-import { initMap2d, mapFlyTo, toggleMap } from './map2d.js';
+import { getMap, initMap2d, mapFlyTo, toggleMap } from './map2d.js';
 import { initTour, toggleTour, updateTour } from './tour.js';
 
 const status = msg => { $('loadMsg').textContent = msg; };
@@ -204,7 +204,7 @@ async function boot() {
     if (i === startIdx) continue;
     try { terrain.prepareDate(i, await loadDate(i)); } catch (err) { console.warn('date', i, err); }
   }
-  window.floodlens = { state, man, actions, setMode, terrain, renderer };   // console / demo scripting
+  window.floodlens = { state, man, actions, setMode, terrain, renderer, getMap };   // console / demo scripting
 }
 
 boot().catch(err => {

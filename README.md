@@ -9,19 +9,21 @@ flood zone. Swing your head to change which satellite's eyes you see with:
 | C-BAND RADAR | Sentinel-1 (OPERA RTC-S1 / DSWx-S1) | Sees through cloud and finds open-water flood, but not water under tree canopy. |
 | L-BAND · NISAR | NISAR GCOV HH | Sees open water **and** the flood hidden under oil-palm canopy (double-bounce brightening). |
 
-NASA Space Apps Challenge 2026 · challenge *Dancing with the SARs* · case study: Kuala Selangor
-floods, Selangor, Malaysia, November 2026.
+NASA Space Apps Challenge 2026 · challenge *Dancing with the SARs*. Two case studies on real data,
+chosen on the start screen:
 
-> **Build status: REAL DATA, flood pass pending.** The app runs on real NASA data for a 20 km
-> area around Ijok, Bukit Rotan and Jeram: four NISAR L-band passes (25 Sep to 31 Oct 2026),
-> Sentinel-1 C-band (OPERA RTC-S1), HLS optical, NASADEM terrain and NASA POWER rainfall.
->
-> NISAR imaged the flood on **12 Nov 2026, 22:50 UTC**. NASA had published the raw data but not
-> yet the L2 product when this build was made, so the app shows the four pre-flood NISAR passes
-> and the flood as Sentinel-1 saw it on 7 Nov. On that date the L-band view says plainly that
-> there was no NISAR pass. The claim "L-band sees the flood under the palms" is therefore
-> **not yet demonstrated on this event**; see `pipeline/validation.md` for what the data does and
-> does not show. Rerunning the pipeline adds the 12 Nov pass with no code change.
+| Case | What it is | What the data shows |
+|---|---|---|
+| **Chókwè, Mozambique, January 2026** | Limpopo river flood; five NISAR passes (four before, one during). The flood NASA visualized at [svs.gsfc.nasa.gov/5661](https://svs.gsfc.nasa.gov/5661). | 17 Jan 2026: NISAR L-band flags **128.8 km²**; Sentinel-1 C-band, 24 minutes earlier, flags **93.1 km²**; optical is 100 % cloud. Pre-flood passes: 0.1 to 3.5 km². |
+| **Kuala Selangor, Malaysia, November 2026** | Live event in oil-palm country. Four NISAR passes before the flood. | NISAR imaged the flood on 12 Nov 2026; NASA had not released that product when this build was made. On 7 Nov Sentinel-1 found 0.24 km² of open water, no more than on dry dates. |
+
+> **Build status: REAL DATA in both cases.** Nothing on screen is simulated. In the Mozambique
+> case most of the extra area L-band finds is flooded farmland with vegetation standing in the
+> water; only 3.6 km² is flagged as flood under tree cover. The claim "L-band sees the flood
+> under the palms" is **not yet demonstrated** in the Malaysian case, because the flood pass is
+> not published; the app says so on screen. `pipeline/validation.md` has the numbers, the
+> false-alarm levels and the limits. Rerunning the pipeline adds the 12 Nov pass with no code
+> change.
 
 ## Run it
 
@@ -47,7 +49,9 @@ python pipeline/06_export_web.py     # writes web/data/
 python pipeline/check_contract.py    # validates web/data/ against the data contract
 ```
 
-Another area or event is a new copy of `pipeline/config.yaml` passed with `--config`.
+Each case is one config file: `pipeline/config.yaml` (Kuala Selangor) and
+`pipeline/config.mozambique.yaml` (Chókwè); pass the second with `--config` to every step. Each
+writes its own folder under `web/data/` and registers itself in `web/data/cases.json`.
 `python pipeline/00_mock_data.py` writes a synthetic scene instead (flagged SIMULATED in the app).
 
 ## Controls
@@ -63,6 +67,9 @@ Another area or event is a new copy of `pipeline/config.yaml` passed with `--con
 | `H` | Back to the start view |
 | `P` | Presentation view → clean view (no HUD) → full HUD, for recording |
 | `I`, `O` | "How it works" explainer, data sources |
+| `K` | Flood exposure ranking: ranked 1 km hexagons, CSV / GeoJSON download, copyable summary |
+| `M` | 2D map (MapLibre): same sensor image and flood classes, ranking hexagons, click for details |
+| `G` | Guided tour: a 30-second scripted flight with captions, for recording |
 | Click the minimap | Jump there |
 
 The URL hash stores camera, sensor and date, so any view can be bookmarked and reopened.
@@ -100,7 +107,8 @@ pipeline/
   requirements.txt
 web/                   the deployed static site
   index.html  css/  js/ (plain ES modules, Three.js from a CDN via import map)
-  data/                manifest.json + rasters + GeoJSON (the only thing the frontend reads)
+  data/cases.json      list of case studies
+  data/<case>/         manifest.json + rasters + GeoJSON (the only thing the frontend reads)
 reference/prototype.html   the original single-file look-and-feel prototype
 CLAUDE.md              full project brief, including the data contract (section 3)
 ```

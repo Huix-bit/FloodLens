@@ -61,6 +61,9 @@ thresholds:
   permanent_water_occurrence: 80
   max_hand_m: 15.0
   min_patch_px: 12
+  # Heavy rain raises L-band backscatter over woodland across the whole region (11 km2 was
+  # flagged on 30 Nov after 166 mm of rain). Flooded vegetation is kept only near open water.
+  veg_max_distance_to_open_m: 300
 
 # Savanna and floodplain: most tree cover here is natural woodland, not plantation.
 landcover:

@@ -432,7 +432,7 @@ def stage_optical(cfg, grid, work):
                         band = np.where(np.isnan(band), part, band)
                 bands.append(band)
             np.savez_compressed(out / f"{date}.npz", rgb=np.stack(bands).astype("float32") * 0.0001, fmask=fm)
-            cloud = (fm & 0b00001110) > 0                    # cloud, adjacent to cloud, cloud shadow
+            cloud = (fm & 0b00011110) > 0                    # cloud, adjacent, shadow, and "snow/ice" (bright cloud is often mislabelled so)
             valid = fm != 255
             chosen[date] = {"scene": " + ".join(t["id"] for t in acq["tiles"]), "acquired": acq["when"].strftime("%Y-%m-%dT%H:%MZ"),
                             "offset_days": round((acq["when"] - when).total_seconds() / 86400, 1),

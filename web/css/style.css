@@ -288,3 +288,5 @@ body.map2d .maplibregl-ctrl-bottom-right{bottom:calc(var(--console-h) + 10px)}
 #caption b{font-weight:700;color:var(--acc)}
 body.tour #help,body.tour #legend,body.tour #probe,body.tour #toast,body.tour .btns{display:none}
 @media (max-width:760px){#caption{font-size:15px;padding:9px 12px;bottom:calc(var(--console-h) + 74px)}}
+#mapUnder{position:absolute;left:0;top:0;transform-origin:0 0;image-rendering:pixelated;pointer-events:none}
+#map2d .maplibregl-canvas-container{position:absolute;inset:0}

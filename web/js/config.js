@@ -9,11 +9,11 @@ export const MODES = [
   { key: 'cband', name: 'C-BAND RADAR', label: 'C-band radar', band: '5.6 cm · Sentinel-1', short: 'C-band', acc: '#8ecbff',
     sub: 'Sees through cloud and rain, but stops at the tree canopy.' },
   { key: 'lband', name: 'L-BAND · NISAR', label: 'L-band radar', band: '24 cm · NISAR', short: 'L-band NISAR', acc: '#00ffd0',
-    sub: 'Passes the canopy. Flooded palms light up by double bounce.' },
+    sub: 'Passes the canopy. Flooded trees light up by double bounce.' },
 ];
 export const LBAND = 2;
 
-export const LANDCOVER = ['Other / bare', 'Permanent water', 'Urban', 'Oil palm / tree crop', 'Cropland / grass', 'Forest'];
+export const LANDCOVER = ['Other / bare', 'Permanent water', 'Urban', 'Oil palm / tree crop', 'Cropland / grass', 'Forest / woodland'];
 export const LC = { OTHER: 0, WATER: 1, URBAN: 2, PALM: 3, CROP: 4, FOREST: 5 };
 export const FLOOD = { DRY: 0, PERM: 1, OPEN: 2, VEG: 3, NODATA: 255 };
 export const FLOOD_NAME = { 0: 'dry', 1: 'permanent water', 2: 'open-water flood', 3: 'flooded vegetation', 255: 'no data' };

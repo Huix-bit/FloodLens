@@ -101,7 +101,7 @@ def main():
     for d, g in by_date.items():
         print(f"  {g['start'][:16]}Z  frame {g['frame']}  {g['bandwidth_mhz']} MHz {'+'.join(g['polarizations'])}  "
               f"{g['collection']}  v{g['product_version']}  published {g['published']}")
-    missing = [d["date"] for d in cfg["dates"] if d["date"] not in by_date]
+    missing = [d["date"] for d in cfg["dates"] if d["date"] not in by_date and d.get("nisar") is not False]
     if missing:
         print(f"\nWARNING: no published granule yet for configured date(s): {', '.join(missing)}")
 

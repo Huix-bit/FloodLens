@@ -1,6 +1,15 @@
 {
   "cases": [
     {
+      "id": "mozambique-2026",
+      "path": "mozambique-2026/",
+      "name": "Chokwe, Mozambique, Jan 2026",
+      "tagline": "Global validation. NISAR imaged this flood on 17 Jan 2026; NASA published the same scene.",
+      "order": 1,
+      "passes": 5,
+      "pending": 0
+    },
+    {
       "id": "selangor-2026",
       "path": "selangor-2026/",
       "name": "Kuala Selangor, Malaysia, Nov 2026",
@@ -10,5 +19,5 @@
       "pending": 1
     }
   ],
-  "default": "selangor-2026"
+  "default": "mozambique-2026"
 }

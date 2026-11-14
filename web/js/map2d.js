@@ -2,13 +2,12 @@
 // sensor image, the flood classes, and the Flood Exposure Ranking hexagons. No basemap tiles and no
 // font server are needed, so the map works offline apart from the MapLibre library itself.
 import { COLORS, FLOOD, MODES } from './config.js';
-import { dataUrl, getDate } from './loader.js';
+import { getDate } from './loader.js';
 import { $, on, state } from './state.js';
 import { toast } from './hud.js';
 
 const LIB = 'https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl';
-let ctx, actions, map = null, active = false, corners, popup = null, drone = null;
-const shown = { sensor: '', flood: '' };
+let ctx, actions, map = null, active = false, corners, popup = null, drone = null, under = null;
 
 function loadLib() {
   if (window.maplibregl) return Promise.resolve();
@@ -22,24 +21,39 @@ function loadLib() {
   });
 }
 
-/** Flood classes of the current pass as a transparent image, in the colours of the flight view. */
-function floodImage() {
-  const { width: w, height: h } = ctx.man.grid, data = getDate(state.dateIdx);
-  const c = document.createElement('canvas');
-  c.width = w; c.height = h;
-  if (!data || !state.detect || state.mode === 0) return c.toDataURL();
-  const g = c.getContext('2d'), img = g.createImageData(w, h), px = img.data, f = data.flood;
+/**
+ * The sensor image and flood classes are painted on an ordinary 2D canvas that sits under the
+ * (transparent) map and is moved with it. MapLibre's own raster layers drew these images black
+ * in testing, and at 20 km across an affine fit to the map projection is exact to a pixel.
+ */
+function paintUnderlay() {
+  const { width: w, height: h } = ctx.man.grid, data = getDate(state.dateIdx), key = MODES[state.mode].key;
+  const g = under.getContext('2d');
+  g.clearRect(0, 0, w, h);
+  if (!data) return;
+  if (data[key]) g.drawImage(data[key], 0, 0);
+  if (!state.detect || state.mode === 0) return;
+  const layer = new ImageData(w, h), px = layer.data, f = data.flood;
   const open = [0x2b, 0x70, 0xff], veg = [0x00, 0xff, 0xd0];
   for (let i = 0, j = 0; i < f.length; i++, j += 4) {
     const v = f[i];
-    let col = null, a = 215;
+    let col = null, alpha = 215;
     if (v === FLOOD.OPEN) col = open;
     else if (v === FLOOD.VEG && state.mode === 2) col = veg;           // only L-band shows flooded vegetation
-    else if (v === 255 && ((i % w) + ((i / w) | 0)) % 6 < 2) { col = [0x5a, 0x10, 0x40]; a = 200; }
-    if (col) { px[j] = col[0]; px[j + 1] = col[1]; px[j + 2] = col[2]; px[j + 3] = a; }
+    else if (v === 255 && ((i % w) + ((i / w) | 0)) % 6 < 2) { col = [0x5a, 0x10, 0x40]; alpha = 200; }
+    if (col) { px[j] = col[0]; px[j + 1] = col[1]; px[j + 2] = col[2]; px[j + 3] = alpha; }
   }
-  g.putImageData(img, 0, 0);
-  return c.toDataURL();
+  const tmp = document.createElement('canvas');
+  tmp.width = w; tmp.height = h;
+  tmp.getContext('2d').putImageData(layer, 0, 0);
+  g.drawImage(tmp, 0, 0);
+}
+
+/** Keep the underlay glued to the map: an affine transform from three projected corners. */
+function placeUnderlay() {
+  const { width: w, height: h } = ctx.man.grid;
+  const nw = map.project(corners[0]), ne = map.project(corners[1]), sw = map.project(corners[3]);
+  under.style.transform = `matrix(${(ne.x - nw.x) / w},${(ne.y - nw.y) / w},${(sw.x - nw.x) / h},${(sw.y - nw.y) / h},${nw.x},${nw.y})`;
 }
 
 function hexData() {
@@ -60,11 +74,7 @@ function hexData() {
 
 function refresh() {
   if (!map || !active) return;
-  const d = ctx.man.dates[state.dateIdx], key = MODES[state.mode].key;
-  // updateImage on a source that is still loading leaves it blank, so only swap when the picture changes
-  const url = new URL(dataUrl(d[key]), location.href).href, fl = floodImage();
-  if (url !== shown.sensor) { map.getSource('sensor')?.updateImage({ url, coordinates: corners }); shown.sensor = url; }
-  if (fl !== shown.flood) { map.getSource('flood')?.updateImage({ url: fl, coordinates: corners }); shown.flood = fl; }
+  paintUnderlay();
   map.getSource('hex')?.setData(hexData());
   popup?.remove();
 }
@@ -84,22 +94,12 @@ async function build() {
   await loadLib();
   const { geo, man } = ctx, hw = geo.W / 2, hh = geo.H / 2;
   corners = [[-hw, -hh], [hw, -hh], [hw, hh], [-hw, hh]].map(([x, z]) => geo.worldToLonLat(x, z));   // NW, NE, SE, SW
-  const d = man.dates[state.dateIdx];
-  shown.sensor = new URL(dataUrl(d[MODES[state.mode].key]), location.href).href;
-  shown.flood = floodImage();
   map = new maplibregl.Map({
     container: 'map2d', attributionControl: false, dragRotate: false, pitchWithRotate: false, maxZoom: 16,
     style: {
       version: 8,
-      sources: {
-        sensor: { type: 'image', url: shown.sensor, coordinates: corners },
-        flood: { type: 'image', url: shown.flood, coordinates: corners },
-        hex: { type: 'geojson', data: hexData() },
-      },
+      sources: { hex: { type: 'geojson', data: hexData() } },
       layers: [
-        { id: 'bg', type: 'background', paint: { 'background-color': '#0b1114' } },
-        { id: 'sensor', type: 'raster', source: 'sensor', paint: { 'raster-fade-duration': 0, 'raster-resampling': 'nearest' } },
-        { id: 'flood', type: 'raster', source: 'flood', paint: { 'raster-fade-duration': 0, 'raster-resampling': 'nearest' } },
         { id: 'hex-fill', type: 'fill', source: 'hex', filter: ['>', ['get', 'rank'], 0],
           paint: { 'fill-color': ['interpolate', ['linear'], ['get', 'score'], 0, '#ffd166', 50, '#ff8c42', 100, '#ff2e63'], 'fill-opacity': ['interpolate', ['linear'], ['get', 'score'], 0, 0.08, 100, 0.5] } },
         { id: 'hex-line', type: 'line', source: 'hex', filter: ['>', ['get', 'rank'], 0],
@@ -107,10 +107,15 @@ async function build() {
       ],
     },
   });
+  under = document.createElement('canvas');
+  under.id = 'mapUnder';
+  under.width = man.grid.width; under.height = man.grid.height;
+  map.getContainer().prepend(under);
+  map.on('move', placeUnderlay); map.on('resize', placeUnderlay);
   map.touchZoomRotate.disableRotation();
   map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
   map.addControl(new maplibregl.ScaleControl({ unit: 'metric' }), 'bottom-right');
-  fit();
+  fit(); placeUnderlay();
 
   for (const f of ctx.places?.features || []) {
     const kind = f.properties.place;
@@ -141,6 +146,9 @@ async function build() {
   await new Promise(res => (map.loaded() ? res() : map.once('load', res)));
 }
 
+/** The MapLibre instance, or null before first use (for scripting and tests). */
+export const getMap = () => map;
+
 export async function toggleMap(force) {
   const want = force ?? !active;
   if (want === active) return active;
@@ -151,7 +159,7 @@ export async function toggleMap(force) {
   }
   active = want;
   $('btnMap').firstChild.textContent = active ? '3D flight ' : '2D map ';
-  if (active) { map.resize(); refresh(); placeDrone(); toast('2D map · select a hexagon for details · M returns to the flight'); }
+  if (active) { map.resize(); placeUnderlay(); refresh(); placeDrone(); toast('2D map · select a hexagon for details · M returns to the flight'); }
   return active;
 }
 

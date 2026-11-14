@@ -180,6 +180,7 @@ def main():
         stats[date] = {"open_flood_km2": p["open_flood_km2"], "veg_flood_km2": p["veg_flood_km2"],
                        "detected_km2": {"optical": det.get("optical"), "cband": det.get("cband"), "lband": det.get("lband")},
                        "is_reference": p.get("is_reference", False), "flood_source": p["source"],
+                       "lband_only_km2": p.get("lband_only_km2"), "cband_only_km2": p.get("cband_only_km2"),
                        **totals["per_date"].get(date, {"people_exposed": 0, "roads_flooded_km": 0, "facilities_affected": 0})}
 
     write_json(out / "stats.json", {"per_date": stats})

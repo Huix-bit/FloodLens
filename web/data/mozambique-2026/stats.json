@@ -1,0 +1,84 @@
+{
+  "per_date": {
+    "2025-11-30": {
+      "open_flood_km2": 0.08,
+      "veg_flood_km2": 0.0,
+      "detected_km2": {
+        "optical": 0.01,
+        "cband": 0.01,
+        "lband": 0.08
+      },
+      "is_reference": true,
+      "flood_source": "nisar",
+      "lband_only_km2": 0.08,
+      "cband_only_km2": 0.01,
+      "people_exposed": 0,
+      "roads_flooded_km": 0.0,
+      "facilities_affected": 0
+    },
+    "2025-12-12": {
+      "open_flood_km2": 3.05,
+      "veg_flood_km2": 0.0,
+      "detected_km2": {
+        "optical": 0.0,
+        "cband": 0.31,
+        "lband": 3.05
+      },
+      "is_reference": true,
+      "flood_source": "nisar",
+      "lband_only_km2": 2.98,
+      "cband_only_km2": 0.25,
+      "people_exposed": 75,
+      "roads_flooded_km": 1.7,
+      "facilities_affected": 0
+    },
+    "2025-12-24": {
+      "open_flood_km2": 0.57,
+      "veg_flood_km2": 0.0,
+      "detected_km2": {
+        "optical": 0.01,
+        "cband": 0.04,
+        "lband": 0.57
+      },
+      "is_reference": true,
+      "flood_source": "nisar",
+      "lband_only_km2": 0.56,
+      "cband_only_km2": 0.03,
+      "people_exposed": 24,
+      "roads_flooded_km": 0.0,
+      "facilities_affected": 0
+    },
+    "2026-01-05": {
+      "open_flood_km2": 3.46,
+      "veg_flood_km2": 0.01,
+      "detected_km2": {
+        "optical": 0.0,
+        "cband": 1.66,
+        "lband": 3.47
+      },
+      "is_reference": true,
+      "flood_source": "nisar",
+      "lband_only_km2": 2.95,
+      "cband_only_km2": 1.14,
+      "people_exposed": 38,
+      "roads_flooded_km": 1.1,
+      "facilities_affected": 0
+    },
+    "2026-01-17": {
+      "open_flood_km2": 125.17,
+      "veg_flood_km2": 3.64,
+      "detected_km2": {
+        "optical": 0.0,
+        "cband": 93.09,
+        "lband": 128.81
+      },
+      "is_reference": false,
+      "flood_source": "nisar",
+      "lband_only_km2": 55.83,
+      "cband_only_km2": 20.12,
+      "people_exposed": 4376,
+      "roads_flooded_km": 100.2,
+      "facilities_affected": 3
+    }
+  }
+}

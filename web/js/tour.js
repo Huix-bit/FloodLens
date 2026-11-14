@@ -32,7 +32,8 @@ function script() {
     [13, () => {
       swingTo(2);
       caption(d.lband_pending ? `NISAR L-band flew over on <b>${(man.pending_passes || [])[0] ? day(man.pending_passes[0].date) : 'a later day'}</b>. NASA has not released that pass yet.`
-        : `NISAR L-band: <b>${km2(det.lband)} km²</b>, with <b>${km2(s.veg_flood_km2)} km²</b> of it under vegetation.`);
+        : s.lband_only_km2 != null ? `NISAR L-band: <b>${km2(det.lband)} km²</b>. <b>${km2(s.lband_only_km2)} km²</b> of it is missed by C-band.`
+          : `NISAR L-band: <b>${km2(det.lband)} km²</b>, with <b>${km2(s.veg_flood_km2)} km²</b> of it under vegetation.`);
     }],
     [19, () => { actions.setDate(before, { quiet: true }); caption(`The same ground on <b>${day(man.dates[before].date)}</b>, before the flood.`); }],
     [23, () => { actions.setDate(flood, { quiet: true }); caption(`<b>${day(d.date)}</b>: about <b>${int(s.people_exposed)}</b> residents and <b>${km2(s.roads_flooded_km)} km</b> of roads on flagged ground.`); }],
