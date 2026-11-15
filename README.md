@@ -1,6 +1,6 @@
 # FloodLens
 
-**See the flood the way NISAR does.**
+**See the flood behind the cloud.**
 NASA Space Apps Challenge 2026 · challenge *Dancing with the SARs*.
 
 **Try it: https://tzehern0703.github.io/FloodLens/** (desktop or phone, no login, no install)

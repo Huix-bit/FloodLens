@@ -61,14 +61,14 @@ If something goes wrong: press **0** to return to the start view, or reload the 
 
 ## Script: 30-second video
 
-65 words; the limit we set is 75. Both videos must name the team and the challenge in the first
+64 words; the limit we set is 75. Both videos must name the team and the challenge in the first
 5 seconds.
 
 | Time | On screen | Narration |
 |---|---|---|
 | 0:00 | Title card: team name | "We are Deriter." |
 | 0:02 | Title card: NASA Space Apps Challenge 2026 · Dancing with the SARs | "NASA Space Apps Challenge 2026, Dancing with the SARs." |
-| 0:05 | Start of the flight, FloodLens wordmark | "This is FloodLens: see the flood the way NISAR does." |
+| 0:05 | Start of the flight, FloodLens wordmark | "This is FloodLens: see the flood behind the cloud." |
 | 0:10 | Optical (cloud), swing to C-band, swing to L-band with the "+55.8 km²" caption | "It combines NASA's NISAR radar with Sentinel-1 and optical data. Mozambique, January 2026: optical saw cloud, Sentinel-1 found 93 square kilometres of flood, NISAR found 129." |
 | 0:20 | Exposure ranking (K), then back to the L-band view | "FloodLens ranks who is in the water, so help can reach them sooner, in any flood, anywhere." |
 | 0:30 | End card: site address | (silence) |
@@ -139,7 +139,7 @@ Total 4:55. Times are targets; read at a calm pace and trim words rather than ru
 > against relief-centre records.
 
 **4:48 Close (7 s).** Screen: end card with the site address.
-> FloodLens. See the flood the way NISAR does.
+> FloodLens. See the flood behind the cloud.
 
 ## Recording tips
 

@@ -41,7 +41,7 @@ function script() {
     }],
     [19, () => { actions.setDate(before, { quiet: true }); caption(`The same ground on <b>${day(man.dates[before].date)}</b>, before the flood.`); }],
     [22.5, () => { actions.setDate(flood, { quiet: true }); caption(`<b>${day(d.date)}</b>: about <b>${int(s.people_exposed)}</b> residents and <b>${km2(s.roads_flooded_km)} km</b> of roads on flagged ground.`); }],
-    [26.5, () => caption('<b>FloodLens</b> See the flood the way NISAR does.')],
+    [26.5, () => caption('<b>FloodLens</b> See the flood behind the cloud.')],
     [29.8, () => stopTour()],
   ];
   return steps;
