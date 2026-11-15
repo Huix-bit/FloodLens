@@ -141,7 +141,7 @@
     {
       "name": "NISAR L2 Geocoded Polarimetric Covariance (GCOV), L-band HH / HV",
       "provider": "NASA / ISRO via ASF DAAC",
-      "url": "https://search.asf.alaska.edu/",
+      "url": "https://doi.org/10.5067/NIL2GCOV-B1",
       "nasa": true,
       "simulated": false,
       "used_for": "L-band mode; open-water and under-canopy flood detection",
@@ -150,7 +150,7 @@
     {
       "name": "OPERA Radiometric Terrain Corrected SAR Backscatter from Sentinel-1 (RTC-S1) v1",
       "provider": "NASA JPL OPERA via ASF DAAC (contains modified Copernicus Sentinel data)",
-      "url": "https://doi.org/10.5067/SNWG/RTC-S1-V1",
+      "url": "https://doi.org/10.5067/SNWG/OPERA_L2_RTC-S1_V1",
       "nasa": true,
       "simulated": false,
       "used_for": "C-band mode; open-water flood seen by Sentinel-1"
@@ -193,7 +193,8 @@
       "url": "https://global-surface-water.appspot.com/",
       "nasa": false,
       "simulated": false,
-      "used_for": "Permanent-water mask"
+      "used_for": "Permanent-water mask",
+      "detail": "Pekel, J.-F., Cottam, A., Gorelick, N., Belward, A. S. (2016). High-resolution mapping of global surface water and its long-term changes. Nature 540, 418-422. https://doi.org/10.1038/nature20584"
     },
     {
       "name": "WorldPop Global 2015-2030 (R2025A) constrained 100 m population, 2026, Mozambique",
@@ -210,6 +211,14 @@
       "nasa": false,
       "simulated": false,
       "used_for": "Buildings, roads, places, facilities, water and forest outlines"
+    },
+    {
+      "name": "Copernicus EMS Rapid Mapping, activation EMSR857 (flood delineation, AOI 01)",
+      "provider": "European Commission, Copernicus Emergency Management Service",
+      "url": "https://mapping.emergency.copernicus.eu/activations/EMSR857/",
+      "nasa": false,
+      "simulated": false,
+      "used_for": "Independent check of the flood map (not shown on screen)"
     }
   ],
   "stretch_db": {
@@ -229,6 +238,33 @@
     "facilities": 0.15
   },
   "pending_passes": [],
+  "validation": {
+    "date": "2026-01-17",
+    "reference": "Copernicus EMS Rapid Mapping, activation EMSR857",
+    "url": "https://mapping.emergency.copernicus.eu/activations/EMSR857/",
+    "rows": [
+      {
+        "product": "EMSR857_AOI01_DEL_PRODUCT_v1",
+        "overlap_km2": 226.3,
+        "ems_flood_km2": 137.1,
+        "ours_km2": 122.3,
+        "pct_of_ems_we_flag": 80.3,
+        "pct_of_ours_outside_ems": 10.0,
+        "ours_outside_ems_km2": 12.2,
+        "iou_pct": 73.7
+      },
+      {
+        "product": "EMSR857_AOI01_FEP_PRODUCT_v1",
+        "overlap_km2": 148.0,
+        "ems_flood_km2": 91.7,
+        "ours_km2": 94.5,
+        "pct_of_ems_we_flag": 86.0,
+        "pct_of_ours_outside_ems": 16.5,
+        "ours_outside_ems_km2": 15.6,
+        "iou_pct": 73.6
+      }
+    ]
+  },
   "home_lonlat": [
     32.99,
     -24.53
@@ -365,5 +401,5 @@
     "permanent_water_km2": 12.16,
     "landcover": "Tree cover is labelled 'forest / woodland' unless it lies inside an OpenStreetMap plantation or orchard polygon (then 'tree crop'); mangrove = forest; shrub, grass, crop and wetland = crop / grass."
   },
-  "generated_utc": "2026-11-14T13:09Z"
+  "generated_utc": "2026-11-15T02:08Z"
 }

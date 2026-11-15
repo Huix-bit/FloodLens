@@ -199,9 +199,13 @@ def main():
                                    "geometry": {"type": "Point", "coordinates": [rc["lon"], rc["lat"]]}})
     write_json(out / "places.geojson", places, compact=True)
 
+    # DOI of the newest processing level actually used (from NASA CMR collection records)
+    dois = {"NISAR_L2_GCOV_V1": "https://doi.org/10.5067/NIL2GCOV-V1", "NISAR_L2_GCOV_PROVISIONAL_V1": "https://doi.org/10.5067/NIL2GCOV-P1",
+            "NISAR_L2_GCOV_BETA_V1": "https://doi.org/10.5067/NIL2GCOV-B1"}
+    nisar_doi = next((dois[k] for k in dois if k in levels), "https://search.asf.alaska.edu/")
     n_nisar = sum(1 for e in entries if e["flood_source"] == "nisar")
     sources = [{"name": "NISAR L2 Geocoded Polarimetric Covariance (GCOV), L-band HH / HV", "provider": "NASA / ISRO via ASF DAAC",
-                "url": "https://search.asf.alaska.edu/", "nasa": True, "simulated": False,
+                "url": nisar_doi, "nasa": True, "simulated": False,
                 "used_for": "L-band mode; open-water and under-canopy flood detection",
                 "detail": f"Track {listing['track']} {listing['direction'].lower()}, {n_nisar} passes; collections: {', '.join(sorted(levels))}"}]
     used_for = {"cband": "C-band mode; open-water flood seen by Sentinel-1", "optical": "Optical mode; cloud cover; optical water test",
@@ -212,8 +216,28 @@ def main():
         a = anc.get(key)
         if a and (key not in ("cband", "optical", "rain") or a.get("dates")):
             sources.append({"name": a["name"], "provider": a["provider"], "url": a["url"], "nasa": bool(a.get("nasa")),
-                            "simulated": False, "used_for": used_for[key]})
+                            "simulated": False, "used_for": used_for[key], **({"detail": a["citation"]} if a.get("citation") else {})})
 
+    # Independent check against Copernicus EMS (written by 07_validate_ems.py), if it was run
+    validation = None
+    vfiles = sorted((work / "flood").glob("validation_ems_*.json"))
+    if vfiles:
+        v = json.loads(vfiles[-1].read_text(encoding="utf-8"))
+        rows = []
+        for pr in v["products"]:
+            c = next((x for k, x in pr["compare"].items() if k.startswith("NISAR")), None)
+            if c:
+                rows.append({"product": pr["product"], "overlap_km2": pr["overlap_km2"], "ems_flood_km2": pr["ems_flood_km2"],
+                             "ours_km2": c["ours_km2"], "pct_of_ems_we_flag": c["pct_of_ems_we_flag"],
+                             "pct_of_ours_outside_ems": round(100 - c["pct_of_ours_inside_ems"], 1),
+                             "ours_outside_ems_km2": c["ours_only_km2"], "iou_pct": c["iou_pct"]})
+        if rows:
+            validation = {"date": v["date"], "reference": "Copernicus EMS Rapid Mapping, activation EMSR857",
+                          "url": "https://mapping.emergency.copernicus.eu/activations/EMSR857/", "rows": rows}
+            sources.append({"name": "Copernicus EMS Rapid Mapping, activation EMSR857 (flood delineation, AOI 01)",
+                            "provider": "European Commission, Copernicus Emergency Management Service",
+                            "url": validation["url"], "nasa": False, "simulated": False,
+                            "used_for": "Independent check of the flood map (not shown on screen)"})
     exported = {e["date"] for e in entries}
     pending = [{"date": d["date"], "label": d["label"], "note": d.get("pending_note", "NISAR pass not yet published by NASA")}
                for d in cfg["dates"] if d["date"] not in exported and d.get("nisar") is not False]
@@ -236,6 +260,7 @@ def main():
         "stretch_db": cfg["stretch_db"],
         "exposure_weights": cfg["exposure"]["weights"],
         "pending_passes": pending,
+        "validation": validation,
         "home_lonlat": [cfg["home"]["lon"], cfg["home"]["lat"]] if cfg.get("home") else None,
         "default_date": cfg.get("default_date"),
         "home_view": cfg.get("home_view"),

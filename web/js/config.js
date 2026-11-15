@@ -13,7 +13,7 @@ export const MODES = [
 ];
 export const LBAND = 2;
 
-export const LANDCOVER = ['Other / bare', 'Permanent water', 'Urban', 'Oil palm / tree crop', 'Cropland / grass', 'Forest / woodland'];
+export const LANDCOVER = ['Other / bare', 'Permanent water', 'Urban', 'Tree cover: plantation / tree crop', 'Cropland / grass', 'Forest / woodland'];
 export const LC = { OTHER: 0, WATER: 1, URBAN: 2, PALM: 3, CROP: 4, FOREST: 5 };
 export const FLOOD = { DRY: 0, PERM: 1, OPEN: 2, VEG: 3, NODATA: 255 };
 export const FLOOD_NAME = { 0: 'dry', 1: 'permanent water', 2: 'open-water flood', 3: 'flooded vegetation', 255: 'no data' };

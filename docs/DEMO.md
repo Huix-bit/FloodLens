@@ -25,7 +25,8 @@ NISAR, Sentinel-1 (OPERA RTC-S1), HLS, NASADEM, NASA POWER rainfall, WorldPop, O
 **Chókwè, Mozambique, 17 January 2026 (the proof).**
 Optical: 100 % cloud. C-band: 93 km². NISAR L-band: 129 km². L-band finds 55.8 km² that C-band
 misses, mostly flooded farmland with vegetation standing in the water. About 4,400 residents and
-100 km of roads are on flagged ground. On the four passes before the flood the detector flags
+100 km of roads are on flagged ground. Checked against the independent Copernicus EMS map of the same
+flood (EMSR857): our NISAR map flags 80 to 86 % of their flood area. On the four passes before the flood the detector flags
 only 0.1 to 3.5 km².
 
 **Kuala Selangor, Malaysia, November 2026 (the live case).**
@@ -117,15 +118,12 @@ Total 4:55. Times are targets; read at a calm pace and trim words rather than ru
 > NASA's archive. It compares each pass with the passes before it, sets its thresholds from the
 > data, and logs every number. NASA data used: NISAR, OPERA Sentinel-1, HLS, NASADEM and POWER.
 
-**3:40 Validation (20 s).** Screen: side-by-side of our flood outline and the reference map.
-> TO FILL IN once the comparison is done. Template:
-> "We compared our 17 January flood outline with [Copernicus EMS activation ___ / UNOSAT product
-> ___] for the same area. [__] percent of our flagged area falls inside theirs, and we flag
-> [__] square kilometres they do not. NASA's own NISAR image of this flood uses the same two dates."
->
-> Until then, say only what is true today: "On the four passes before the flood our detector
-> flags between 0.1 and 3.5 square kilometres, against 129 on the flood pass. We have not yet
-> compared our outline with an independent flood map."
+**3:40 Validation (20 s).** Screen: 2D map (M) of the L-band result; mention Copernicus EMSR857.
+> We checked our map against an independent one. The Copernicus Emergency Management Service
+> mapped the same flood, activation EMSR857. Where the two overlap, our NISAR map flags 80 to
+> 86 percent of the Copernicus flood. Ten to 17 percent of what we flag lies outside their
+> polygons. Their images are a day either side of ours, and it is another satellite map, not
+> ground truth.
 
 **4:00 Who would use it, and how it pays for itself (30 s).** Screen: ranking sheet, then the case picker.
 > The first users are disaster agencies such as NADMA and the Department of Irrigation and

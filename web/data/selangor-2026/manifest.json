@@ -140,7 +140,7 @@
     {
       "name": "NISAR L2 Geocoded Polarimetric Covariance (GCOV), L-band HH / HV",
       "provider": "NASA / ISRO via ASF DAAC",
-      "url": "https://search.asf.alaska.edu/",
+      "url": "https://doi.org/10.5067/NIL2GCOV-V1",
       "nasa": true,
       "simulated": false,
       "used_for": "L-band mode; open-water and under-canopy flood detection",
@@ -149,7 +149,7 @@
     {
       "name": "OPERA Radiometric Terrain Corrected SAR Backscatter from Sentinel-1 (RTC-S1) v1",
       "provider": "NASA JPL OPERA via ASF DAAC (contains modified Copernicus Sentinel data)",
-      "url": "https://doi.org/10.5067/SNWG/RTC-S1-V1",
+      "url": "https://doi.org/10.5067/SNWG/OPERA_L2_RTC-S1_V1",
       "nasa": true,
       "simulated": false,
       "used_for": "C-band mode; open-water flood seen by Sentinel-1"
@@ -192,7 +192,8 @@
       "url": "https://global-surface-water.appspot.com/",
       "nasa": false,
       "simulated": false,
-      "used_for": "Permanent-water mask"
+      "used_for": "Permanent-water mask",
+      "detail": "Pekel, J.-F., Cottam, A., Gorelick, N., Belward, A. S. (2016). High-resolution mapping of global surface water and its long-term changes. Nature 540, 418-422. https://doi.org/10.1038/nature20584"
     },
     {
       "name": "WorldPop Global 2015-2030 (R2025A) constrained 100 m population, 2026, Malaysia",
@@ -234,6 +235,7 @@
       "note": "NISAR imaged this flood on 12 Nov 2026, 22:50 UTC (track 112). NASA published the raw L0B data on 13 Nov; the L2 GCOV product was not yet released when this build was made."
     }
   ],
+  "validation": null,
   "home_lonlat": [
     101.352,
     3.271
@@ -339,7 +341,7 @@
       "rule": "NDWI (green, NIR) > 0 on HLS pixels that Fmask marks free of cloud, cloud-adjacent and shadow; permanent water removed"
     },
     "permanent_water_km2": 46.56,
-    "landcover": "Tree cover is labelled 'oil palm / tree crop' unless it lies inside an OpenStreetMap forest, wood, wetland or protected-area polygon (then 'forest'); mangrove = forest."
+    "landcover": "ESA WorldCover has no oil-palm class. Its 'tree cover' class is labelled 'plantation / tree crop' unless it lies inside an OpenStreetMap forest, wood, wetland or protected-area polygon (then 'forest'); mangrove = forest. No dedicated oil-palm map was used."
   },
-  "generated_utc": "2026-11-14T13:08Z"
+  "generated_utc": "2026-11-15T02:08Z"
 }

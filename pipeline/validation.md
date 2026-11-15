@@ -41,6 +41,7 @@ What this does and does not show:
 - It does **not** show a large flood hidden under closed tree canopy. Only 3.6 km² was flagged by
   the double-bounce rule here; this floodplain is mostly open farmland, not plantation.
 - No ground truth was available to us, so "flagged" is not the same as "confirmed flooded".
+  Section A5 compares the result with an independent satellite map from Copernicus EMS.
 
 ## A3. Detector behaviour on the pre-flood passes
 
@@ -70,13 +71,42 @@ The HLS scene nearest the flood pass (19 Jan) is uniformly bright (reflectance a
 all bands). Fmask labels 21 % of it cloud and 79 % snow / ice, which cannot be right at 24°S in
 summer. The pipeline now counts the snow / ice flag as cloud, giving 100 % cloud for this scene.
 
-## A5. Comparison with NASA's own visualization
+## A5. Independent check against Copernicus EMS Rapid Mapping (EMSR857)
 
-NASA's Scientific Visualization Studio published "NISAR Reveals Major Flooding In Mozambique"
-(https://svs.gsfc.nasa.gov/5661), using the same two NISAR dates (5 and 17 January 2026) with
-close-ups of Chókwè and Macia. We use the same track, the same dates and one of the same places.
-We could not download that page's images from the pipeline, so the comparison of flood outlines
-is still to be done by eye by the team; it is not claimed here as a quantitative validation.
+The Copernicus Emergency Management Service mapped this flood under activation EMSR857
+("Flood in Mozambique and South Africa", activated 17 January 2026). Its area of interest 01
+("Chibabel") covers the eastern part of our box. We rasterised its flood polygons
+(`observedEventA`, "Riverine flood", semi-automatic extraction) on our 20 m grid and compared
+them with our 17 January maps inside the overlap of the two areas, excluding our permanent-water
+mask. Script: `pipeline/07_validate_ems.py`; output: `flood/validation_ems_2026-01-17.json`.
+
+| Copernicus product (image time, UTC) | Overlap with our box | EMS flood | Our NISAR L-band | Flagged by both | Share of EMS flood we flag | Share of ours inside EMS | Overlap score (IoU) |
+|---|---|---|---|---|---|---|---|
+| First estimate, FEP (16 Jan 16:22) | 148.0 km² | 91.7 km² | 94.5 km² | 78.9 km² | **86.0 %** | 83.5 % | 73.6 % |
+| Delineation, DEL (18 Jan 14:55) | 226.3 km² | 137.1 km² | 122.3 km² | 110.1 km² | **80.3 %** | 90.0 % | 73.7 % |
+
+The same comparison for our Sentinel-1 C-band rule: it flags 63.4 % (FEP) and 54.8 % (DEL) of
+the Copernicus flood, with overlap scores of 58.2 % and 51.3 %. So our L-band map agrees with
+the independent map clearly better than our C-band map does.
+
+The reverse figure: 16.5 % of what our NISAR map flags (15.6 km²) lies outside the Copernicus
+first-estimate polygons, and 10.0 % (12.2 km²) lies outside the later delineation. That area is
+either flood they did not map at their image time, or false alarm on our side; we cannot tell
+which without ground data.
+
+How to read this:
+- The Copernicus images are from 11 hours before and 35 hours after the NISAR pass, and the
+  flood was still rising, so some disagreement is real change, not error. The later product
+  maps more flood than we do (27.1 km² only in theirs); the earlier one maps slightly less.
+- Copernicus EMS is itself a satellite-derived rapid map, not ground truth. This is agreement
+  between two independent methods, not proof on the ground.
+- The vector files do not name the sensor of each image; the image times are from the
+  Copernicus EMS activation record.
+- Area of interest 06 ("Palmeira"), whose product is from the same minute as our Sentinel-1
+  image, does not overlap our box, so it could not be used.
+
+NASA's Scientific Visualization Studio also published this flood from the same two NISAR dates
+(https://svs.gsfc.nasa.gov/5661); we did not compare against it numerically.
 
 ## A6. Limitations specific to this case
 
@@ -88,8 +118,9 @@ is still to be done by eye by the team; it is not claimed here as a quantitative
 # Case B: Kuala Selangor floods, Malaysia, November 2026
 
 Case study: Kuala Selangor floods, November 2026. Area of interest: 20.48 km × 20.48 km centred on
-101.35°E, 3.30°N (Ijok, Bukit Rotan, Jeram, Bukit Kuching). Land cover in the area: 73 % tree
-cover outside mapped forest (oil palm and other tree crops), 8 % crop / grass, 6 % built-up,
+101.35°E, 3.30°N (Ijok, Bukit Rotan, Jeram, Bukit Kuching). Land cover in the area: 73 % ESA WorldCover
+tree cover outside OpenStreetMap forest polygons (in this district that is mostly oil-palm and
+other plantation, but WorldCover has no oil-palm class and no oil-palm map was used), 8 % crop / grass, 6 % built-up,
 10 % water (mostly sea). About 141,000 residents (WorldPop 2026).
 
 All numbers in this case come from `pipeline/work/flood/detect.json`, written by `03_flood_detect.py` on
@@ -181,7 +212,7 @@ ground itself, so it is context and not a validation point.
 - NISAR products used are Provisional (v1.0.11) for three passes and Validated (v1.0.20) for one.
   Mixing calibration versions can add a small bias to change detection; the pass-to-pass medians
   per land-cover class agree within 0.4 dB.
-- The "oil palm / tree crop" class is ESA WorldCover tree cover outside OpenStreetMap forest,
+- The "plantation / tree crop" class is ESA WorldCover tree cover outside OpenStreetMap forest,
   wood, wetland and protected-area polygons. It is not a dedicated oil-palm map.
 - NASADEM is a surface model: over plantations it follows the canopy top, not the ground, so
   the height-above-drainage mask is loose (15 m) on purpose.

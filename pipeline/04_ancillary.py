@@ -248,8 +248,9 @@ def stage_landcover(cfg, grid, work):
     else:
         lc[tree] = 3                                    # plantation region: tree cover outside mapped forest = tree crop
         lc[tree & forest & ~plantation] = 5
-        method = ("Tree cover is labelled 'oil palm / tree crop' unless it lies inside an OpenStreetMap "
-                  "forest, wood, wetland or protected-area polygon (then 'forest'); mangrove = forest.")
+        method = ("ESA WorldCover has no oil-palm class. Its 'tree cover' class is labelled 'plantation / tree crop' "
+                  "unless it lies inside an OpenStreetMap forest, wood, wetland or protected-area polygon (then "
+                  "'forest'); mangrove = forest. No dedicated oil-palm map was used.")
     np.save(work / "landcover.npy", lc)
     names = ["other", "water", "urban", "palm/tree crop", "crop/grass", "forest"]
     share = {names[k]: round(float((lc == k).mean() * 100), 1) for k in range(6)}
@@ -277,7 +278,8 @@ def stage_water(cfg, grid, work):
     thr = cfg["thresholds"]["permanent_water_occurrence"]
     note(work, "water", {"name": "JRC Global Surface Water occurrence 1984-2021 (v1.4)", "provider": "EC JRC / Google",
                          "url": "https://global-surface-water.appspot.com/", "nasa": False,
-                         "note": "Derived from the NASA/USGS Landsat archive."})
+                         "note": "Derived from the NASA/USGS Landsat archive.",
+                         "citation": "Pekel, J.-F., Cottam, A., Gorelick, N., Belward, A. S. (2016). High-resolution mapping of global surface water and its long-term changes. Nature 540, 418-422. https://doi.org/10.1038/nature20584"})
     print(f"  water: occurrence >= {thr}% on {float((occ >= thr).mean() * 100):.2f}% of the AOI")
 
 
@@ -375,7 +377,7 @@ def stage_cband(cfg, grid, work):
             old.unlink()
     note(work, "cband", {"name": "OPERA Radiometric Terrain Corrected SAR Backscatter from Sentinel-1 (RTC-S1) v1",
                          "provider": "NASA JPL OPERA via ASF DAAC (contains modified Copernicus Sentinel data)",
-                         "url": "https://doi.org/10.5067/SNWG/RTC-S1-V1", "nasa": True, "dates": chosen})
+                         "url": "https://doi.org/10.5067/SNWG/OPERA_L2_RTC-S1_V1", "nasa": True, "dates": chosen})
 
 
 # --------------------------------------------------------------------------- optical (HLS)

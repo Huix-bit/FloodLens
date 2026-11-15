@@ -1,198 +1,164 @@
 # FloodLens
 
-**See the flood the way NISAR does.** A browser-based first-person drone flight over a Malaysian
-flood zone. Swing your head to change which satellite's eyes you see with:
+**See the flood the way NISAR does.**
+NASA Space Apps Challenge 2026 · challenge *Dancing with the SARs*.
 
-| Swing to | Sensor | What you see |
+**Try it: https://tzehern0703.github.io/FloodLens/** (desktop or phone, no login, no install)
+
+FloodLens is a browser flight over a real flood, rebuilt from satellite data. You swing between
+three satellites' views of the same ground on the same day and see what each one finds:
+
+| Sensor | Data | What it sees |
 |---|---|---|
-| OPTICAL EYE | NASA HLS true colour | Clear before the flood; cloud and rain at the peak. Optical is blind in the monsoon. |
-| C-BAND RADAR | Sentinel-1 (OPERA RTC-S1 / DSWx-S1) | Sees through cloud and finds open-water flood, but not water under tree canopy. |
-| L-BAND · NISAR | NISAR GCOV HH | Sees open water **and** the flood hidden under oil-palm canopy (double-bounce brightening). |
+| Optical | NASA HLS true colour | Sunlight. In a storm: cloud. |
+| C-band radar | Sentinel-1 (NASA OPERA RTC-S1) | Through cloud. Open water, but its 5.6 cm wave scatters in crops, reeds and tree crowns. |
+| L-band radar | NASA / ISRO NISAR (GCOV, HH and HV) | Through cloud and through much of that vegetation, with a 24 cm wave. |
 
-NASA Space Apps Challenge 2026 · challenge *Dancing with the SARs*. Two case studies on real data,
-chosen on the start screen:
+A bar shows the flood area each sensor flags. Swinging from C-band to L-band highlights, in lime,
+the flood that only L-band finds. A ranking lists who is exposed, per 1 km hexagon.
 
-| Case | What it is | What the data shows |
-|---|---|---|
-| **Chókwè, Mozambique, January 2026** | Limpopo river flood; five NISAR passes (four before, one during). The flood NASA visualized at [svs.gsfc.nasa.gov/5661](https://svs.gsfc.nasa.gov/5661). | 17 Jan 2026: NISAR L-band flags **128.8 km²**; Sentinel-1 C-band, 24 minutes earlier, flags **93.1 km²**; optical is 100 % cloud. Pre-flood passes: 0.1 to 3.5 km². |
-| **Kuala Selangor, Malaysia, November 2026** | Live event in oil-palm country. Four NISAR passes before the flood. | NISAR imaged the flood on 12 Nov 2026; NASA had not released that product when this build was made. On 7 Nov Sentinel-1 found 0.24 km² of open water, no more than on dry dates. |
+## The two cases (both real data, nothing simulated)
 
-> **Build status: REAL DATA in both cases.** Nothing on screen is simulated. In the Mozambique
-> case most of the extra area L-band finds is flooded farmland with vegetation standing in the
-> water; only 3.6 km² is flagged as flood under tree cover. The claim "L-band sees the flood
-> under the palms" is **not yet demonstrated** in the Malaysian case, because the flood pass is
-> not published; the app says so on screen. `pipeline/validation.md` has the numbers, the
-> false-alarm levels and the limits. Rerunning the pipeline adds the 12 Nov pass with no code
-> change.
+| Case | What the data shows |
+|---|---|
+| **Chókwè, Mozambique, 17 January 2026** (Limpopo flood; five NISAR passes) | Optical: 100 % cloud. C-band: **93.1 km²**. NISAR L-band: **128.8 km²**. 55.8 km² is flagged by L-band and missed by C-band, mostly flooded farmland with vegetation standing in the water. About 4,400 residents and 100 km of roads are on flagged ground. On the four pre-flood passes the detector flags 0.1 to 3.5 km². |
+| **Kuala Selangor, Malaysia, November 2026** (live event; four NISAR passes before the flood) | On 7 Nov, 3,834 people were evacuated across Selangor. Optical: 84 % cloud. C-band: 0.24 km² in our area, no more than on dry dates. NISAR imaged the flood on 12 Nov 2026; NASA had not published that product at code freeze (15 Nov 2026), so the app shows an empty "awaiting NASA" slot. |
 
-## Run it
+## Validation
 
-No build step, no backend. Any static file server works.
+**Independent check (Mozambique).** The Copernicus Emergency Management Service mapped the same
+flood (activation [EMSR857](https://mapping.emergency.copernicus.eu/activations/EMSR857/)). Where
+its area overlaps ours, on the shared 20 m grid:
 
-```bash
-cd web
-python -m http.server 8000
-# open http://localhost:8000
-```
+| Copernicus product (image time, UTC) | EMS flood | Our NISAR map | Share of EMS flood we flag | Share of ours outside EMS | Overlap score (IoU) |
+|---|---|---|---|---|---|
+| First estimate (16 Jan 16:22) | 91.7 km² | 94.5 km² | **86.0 %** | 16.5 % (15.6 km²) | 73.6 % |
+| Delineation (18 Jan 14:55) | 137.1 km² | 122.3 km² | **80.3 %** | 10.0 % (12.2 km²) | 73.7 % |
 
-### Rebuild the data from NASA's archive
+Our own Sentinel-1 C-band rule flags only 55 to 63 % of the Copernicus flood, so the L-band map
+agrees with the independent map better than the C-band map does. The Copernicus images are from
+11 hours before and 35 hours after the NISAR pass, and theirs is also a satellite map, not
+ground truth.
 
-```bash
-pip install -r pipeline/requirements.txt
-# NASA Earthdata login in ~/.netrc:  machine urs.earthdata.nasa.gov login USER password PASS
-python pipeline/01_search_nisar.py   # which NISAR passes are published (no login needed)
-python pipeline/02_fetch_subset.py   # reads only the AOI window of each 6 GB granule (about 130 MB each)
-python pipeline/04_ancillary.py      # DEM, land cover, OSM, water, population, Sentinel-1, HLS, rainfall
-python pipeline/03_flood_detect.py   # change detection, thresholds logged
-python pipeline/05_exposure.py       # 1 km hexagon ranking
-python pipeline/06_export_web.py     # writes web/data/
-python pipeline/check_contract.py    # validates web/data/ against the data contract
-```
+**False-alarm level.** Each pre-flood pass is tested against the others: Mozambique 0.1 to
+3.5 km², Selangor 0.0 to 0.5 km², against 128.8 km² on the flood pass.
 
-Each case is one config file: `pipeline/config.yaml` (Kuala Selangor) and
-`pipeline/config.mozambique.yaml` (Chókwè); pass the second with `--config` to every step. Each
-writes its own folder under `web/data/` and registers itself in `web/data/cases.json`.
-`python pipeline/00_mock_data.py` writes a synthetic scene instead (flagged SIMULATED in the app).
+Full numbers, method and reproduction steps: [`pipeline/validation.md`](pipeline/validation.md)
+and `pipeline/07_validate_ems.py`.
+
+## Limitations (please read)
+
+- **Not yet shown: flooding under plantation canopy in Malaysia.** That needs the 12 Nov NISAR
+  pass. In Mozambique only 3.6 km² is flagged as flood under tree cover; the L-band advantage
+  there is mostly over flooded farmland.
+- **"Flagged" is not "confirmed".** There is no ground truth. The Copernicus comparison is one
+  satellite method against another.
+- Radar gives flood extent, not depth. The height of the water surface in 3D is illustrative.
+- The Selangor passes mix Provisional and Validated NISAR products; Mozambique uses Beta products.
+- "Plantation / tree crop" is ESA WorldCover *tree cover* outside OpenStreetMap forest polygons
+  (73 % of the Selangor box). WorldCover has no oil-palm class and no oil-palm map was used.
+- Sentinel-1 and optical images are from the nearest available day (same morning in Mozambique,
+  up to 4 days away in Selangor); the app shows each image's date.
+- NASADEM is a surface model, so over trees it follows the canopy, not the ground.
+- The exposure ranking is a screening aid from open data, **not a rescue order**.
+- Tested in desktop Chrome / Edge and at phone size in an emulator; not on a physical phone, nor
+  in Firefox or Safari.
 
 ## Controls
 
 | Input | Action |
 |---|---|
+| `E` / `Q`, a fast sideways flick, or tap a number in the bar | **Swing** to the next / previous sensor |
 | `W` `A` `S` `D` / arrows, drag | Fly and look |
-| `R` / `F` (or `Space` / `C`), `Shift` | Up / down, boost |
-| `E` / `Q`, or a fast left/right flick | **Swing** to the next / previous sensor |
-| `1`–`9`, mouse wheel, timeline chips, `L` | Jump between satellite passes, play the timeline |
-| `X` | Lens: a circle around the crosshair shows another sensor (NISAR, or optical when already in NISAR) |
-| `T` | Flood-detection overlay on / off (shows the raw backscatter) |
-| `0` or `Home` | Back to the start view |
-| `H` | Show or hide the controls panel (hidden by default) |
-| `V`, or hold `Shift` | Crosshair probe: coordinates, land cover, backscatter, pass-by-pass chart |
-| `P` | Flight view (default) → full instruments (compass, probe, controls) → scene only |
-| `I`, `O` | "How it works" explainer, data sources |
-| `K` | Flood exposure ranking: ranked 1 km hexagons, CSV / GeoJSON download, copyable summary |
-| `M` | 2D map (MapLibre): same sensor image and flood classes, ranking hexagons, click for details |
-| `G` | Guided tour: a 30-second scripted flight with captions, for recording |
-| Click the minimap | Jump there |
+| `R` / `F`, `Shift` | Up / down, boost |
+| `1`–`9`, mouse wheel, timeline, `L` | Change satellite pass, play the timeline |
+| `K` | Exposure ranking and pass details: ranked hexagons, CSV / GeoJSON download, copyable summary, key |
+| `M` | 2D map of the same data; click for details, "Fly here in 3D" |
+| `G` | Guided tour (29 seconds, captions from the data) |
+| `I`, `O` | How it works, data sources |
+| `H` | Controls panel (hidden by default) |
+| `V`, or hold `Shift` | Probe under the crosshair: coordinates, land cover, backscatter, pass-by-pass chart |
+| `X`, `T` | Lens onto another sensor; flood overlay on / off |
+| `0`, `P` | Start view; more / fewer instruments |
 
-The URL hash stores camera, sensor and date, so any view can be bookmarked and reopened.
-
-The default flight view shows only the scene, a small map and one bar: the flood area each sensor
-flags on the current pass (the three numbers are also the sensor selector) and the timeline.
-Swinging from C-band to L-band flashes the pixels that only L-band flags and names their area;
-both sets of pixels come from the data (`flood_<date>.png` and the optional `cflood_<date>.png`,
-what C-band itself flagged).
-
-## What is on screen, and what is not data
-
-Drawn from data files in `web/data/` only: terrain (`dem.png`), the three sensor images, the flood
-classes, the area statistics, place names, building footprints.
-
-Illustrative, and labelled so in the app: rain, fog, water shimmer, the height of the water surface
-(radar gives extent, not depth; the surface is estimated from the DEM), tree and palm models
-(placed where the land-cover raster says palm or forest, not individual mapped trees), building
-heights flagged `height_estimated`. Terrain relief is exaggerated ×2.
-
-The crosshair read-out shows the land-cover class, backscatter in dB and flood class of the pixel
-you are looking at, and a small chart of L-band and C-band backscatter at that pixel across all
-passes.
-
-## Repository layout
-
-```
-pipeline/
-  config.yaml          the case study: AOI, grid, dates, thresholds. A new area = a new config file.
-  config.mock.yaml     synthetic scene for 00_mock_data.py
-  common.py            config loading, the shared grid, UTM maths, remote HDF5 range reader
-  00_mock_data.py      writes a complete SIMULATED web/data/ in the contract format
-  01_search_nisar.py   NASA CMR search for NISAR GCOV passes that cover the whole AOI
-  02_fetch_subset.py   reads the AOI window of each granule over HTTPS range requests
-  03_flood_detect.py   Lee filter, median reference, Otsu threshold, flood classes, C-band and optical tests
-  04_ancillary.py      NASADEM, WorldCover, JRC water, OSM, WorldPop, OPERA RTC-S1, HLS, rainfall
-  05_exposure.py       Flood Exposure Ranking on 1 km hexagons
-  06_export_web.py     writes web/data/; flags anything missing or pending instead of inventing it
-  validation.md        what the data shows and does not show, false-alarm level, limitations
-  check_contract.py    validates web/data/ (sizes, class codes, stats vs rasters, vectors)
-  requirements.txt
-web/                   the deployed static site
-  index.html  css/  js/ (plain ES modules, Three.js from a CDN via import map)
-  data/cases.json      list of case studies
-  data/<case>/         manifest.json + rasters + GeoJSON (the only thing the frontend reads)
-reference/prototype.html   the original single-file look-and-feel prototype
-CLAUDE.md              full project brief, including the data contract (section 3)
-```
-
-Frontend modules: `loader.js` (data contract), `geo.js` (grid ↔ world ↔ lon/lat), `terrain.js`
-(DEM mesh, sensor textures, flood masks, water surface), `vegetation.js`, `buildings.js`,
-`atmosphere.js`, `controls.js`, `swing.js`, `timeline.js`, `hud.js`, `minimap.js`, `probe.js`,
-`labels.js`, `modals.js`, `main.js`.
-
-## Data contract in short
-
-All rasters share one north-up UTM grid (1024 × 1024 at 20 m here). Full details in `CLAUDE.md` §3.
-
-- `dem.png`: Terrain-RGB, `height_m = -10000 + (R·65536 + G·256 + B) · 0.1`
-- `landcover.png`: 0 other, 1 permanent water, 2 urban, 3 oil palm / tree crop, 4 cropland/grass, 5 forest
-- `optical_<date>.png`: 8-bit true colour, clouds left in
-- `cband_<date>.png`, `lband_<date>.png`: 8-bit backscatter. **Stretch rule:** linear in dB,
-  −25 dB → 0 and 0 dB → 255, clipped (`stretch_db` in `config.yaml`, echoed in `manifest.json`)
-- `flood_<date>.png`: 0 dry, 1 permanent water, 2 open-water flood, 3 flooded vegetation, 255 no data
-- `stats.json`, `hexes.geojson`, `buildings.geojson`, `places.geojson`
-
-The number of dates is read from `manifest.json`; nothing in the app assumes three.
-
-### Flood Exposure Ranking score
-
-Per 1 km hexagon and per date:
-
-```
-score = 100 × ( 0.40 · people / max(people)
-              + 0.25 · flooded_fraction
-              + 0.20 · flooded_road_km / max(flooded_road_km)
-              + 0.15 · facilities / max(facilities) )
-```
-
-Maxima are taken over all hexagons and dates. Weights live in `config.yaml`. It is a screening aid
-built from open data, not a rescue order.
-
-## How the flood map is made
-
-1. Each NISAR pass is multilooked from 10 m to the 20 m grid and speckle-filtered (5×5 Lee).
-2. The reference is the per-pixel median of the other pre-flood passes on the same track.
-3. **Open-water flood**: HH below the water threshold and at least 3 dB lower than the reference.
-4. **Flooded vegetation**: tree or palm land cover, HH at least 3 dB higher than the reference,
-   and HH rising at least as much as HV (double bounce is a co-polarised effect).
-5. Permanent water (JRC, WorldCover, OSM), ground more than 15 m above the nearest drainage,
-   and patches under 12 pixels are removed.
-
-The water threshold comes from Otsu's method on a balanced water / land sample; the change
-thresholds are the larger of the configured value and three times the measured pass-to-pass
-noise. Every value used is written to `manifest.json → method` and shown in the app.
-Sentinel-1 gets the same open-water rule, each acquisition against earlier ones on its own track.
+Colours: in C-band mode, blue is what C-band flagged. In L-band mode, blue is flood flagged by
+both radars and lime is flood flagged by L-band only.
 
 ## Data sources
 
-All of these are loaded in the current build.
+NASA data:
 
-| Dataset | Provider | Used for |
-|---|---|---|
-| **NISAR L2 GCOV** (L-band HH / HV, track 112 ascending) | NASA / ISRO via ASF DAAC | L-band mode, flood and flooded-vegetation detection |
-| **OPERA RTC-S1 v1** (Sentinel-1 C-band backscatter) | NASA JPL OPERA via ASF DAAC; contains modified Copernicus Sentinel data | C-band mode, open-water flood |
-| **HLS v2.0** (HLSS30 / HLSL30) | NASA LP DAAC | Optical mode, cloud cover, optical water test |
-| **NASADEM HGT v001** | NASA LP DAAC | 3D terrain, height-above-drainage mask |
-| **NASA POWER** daily precipitation (MERRA-2 / GEOS-IT) | NASA Langley Research Center | Rainfall in the 7 days before each pass |
-| ESA WorldCover 10 m 2021 v200 | ESA / VITO | Land cover |
-| JRC Global Surface Water v1.4 (from the NASA / USGS Landsat archive) | EC JRC / Google | Permanent water mask |
-| WorldPop 2026 constrained 100 m, Malaysia | WorldPop, University of Southampton | People exposed |
-| OpenStreetMap | OpenStreetMap contributors (ODbL) | Buildings, roads, places, facilities, water and forest outlines |
+| Dataset | Provider | Link | Used for |
+|---|---|---|---|
+| **NISAR L2 GCOV**, Validated V1 | NASA / ISRO via ASF DAAC | https://doi.org/10.5067/NIL2GCOV-V1 | Selangor pass of 31 Oct 2026 |
+| **NISAR L2 GCOV**, Provisional V1 | NASA / ISRO via ASF DAAC | https://doi.org/10.5067/NIL2GCOV-P1 | Selangor passes of 25 Sep, 7 Oct, 19 Oct 2026 |
+| **NISAR L2 GCOV**, Beta V1 | NASA / ISRO via ASF DAAC | https://doi.org/10.5067/NIL2GCOV-B1 | Mozambique, five passes, 30 Nov 2025 to 17 Jan 2026 |
+| **OPERA RTC-S1 V1** (Sentinel-1 backscatter) | NASA JPL OPERA via ASF DAAC; contains modified Copernicus Sentinel data | https://doi.org/10.5067/SNWG/OPERA_L2_RTC-S1_V1 | C-band view and detection |
+| **HLS v2.0** Sentinel-2 (HLSS30) | NASA LP DAAC | https://doi.org/10.5067/HLS/HLSS30.002 | Optical view, cloud cover |
+| **HLS v2.0** Landsat (HLSL30) | NASA LP DAAC | https://doi.org/10.5067/HLS/HLSL30.002 | Optical view, cloud cover |
+| **NASADEM** 1 arc-second v001 | NASA LP DAAC | https://doi.org/10.5067/MEaSUREs/NASADEM/NASADEM_HGT.001 | 3D terrain, height-above-drainage mask |
+| **NASA POWER** daily precipitation | NASA Langley Research Center | https://power.larc.nasa.gov/ | Rain in the 7 days before each pass |
 
-Bold rows are NASA datasets. Links and DOIs are in `web/data/manifest.json → sources` and in the
-in-app Data sources panel. Evacuee counts quoted in the app are from the Malaysian Social Welfare
-Department (JKM) as reported by BERNAMA; they are context, not satellite data.
+Partner and other data:
 
-## Use of AI tools
+| Dataset | Provider | Link | Used for |
+|---|---|---|---|
+| ESA WorldCover 10 m 2021 v200 | ESA / VITO | https://doi.org/10.5281/zenodo.7254221 | Land cover |
+| JRC Global Surface Water v1.4 (Pekel et al. 2016, *Nature* 540, 418-422) | European Commission JRC / Google | https://doi.org/10.1038/nature20584 · https://global-surface-water.appspot.com/ | Permanent-water mask |
+| Copernicus EMS Rapid Mapping, EMSR857 | European Commission, Copernicus EMS | https://mapping.emergency.copernicus.eu/activations/EMSR857/ | Independent validation |
+| WorldPop 2015-2030 (R2025A), constrained 100 m, 2026 | WorldPop, University of Southampton | https://www.worldpop.org/ | People exposed |
+| OpenStreetMap | OpenStreetMap contributors (ODbL) | https://www.openstreetmap.org/copyright | Buildings, roads, places, facilities |
 
-This project was built with AI assistance: Claude (Anthropic), via Claude Code, was used to write
-and test code and documentation. All data-processing choices and results are reviewed by the team.
+Evacuee counts are from the Malaysian Social Welfare Department (JKM) as reported by BERNAMA;
+they are context, not satellite data. NASA also published this Mozambique flood from the same two
+NISAR dates (svs.gsfc.nasa.gov/5661). All links above were opened and checked on 15 Nov 2026.
+
+## How the flood map is made
+
+1. Read only the 20 km window of each 6 GB NISAR file from NASA's archive (about 130 MB each).
+2. Multilook to a 20 m grid; 5×5 Lee speckle filter.
+3. Reference = per-pixel median of the other pre-flood passes on the same track.
+4. **Open-water flood**: HH below a water threshold and at least 3 dB lower than the reference.
+5. **Flooded vegetation**: tree cover, HH at least 3 dB higher than the reference, and rising at
+   least as much as HV (double bounce).
+6. Remove permanent water, ground well above the nearest drainage, and tiny patches.
+
+The water threshold comes from Otsu's method; the change thresholds are at least three times the
+measured pass-to-pass noise. Sentinel-1 gets the same open-water rule against earlier images on
+its own track. Every value used is written to each case's `manifest.json`.
+
+Exposure score per 1 km hexagon: `100 × (0.40·people/max + 0.25·flagged share + 0.20·road km/max + 0.15·facilities/max)`.
+
+## Run it yourself
+
+```bash
+cd web && python -m http.server 8000        # then open http://localhost:8000
+```
+
+Rebuild the data (needs a free NASA Earthdata login in `~/.netrc`):
+
+```bash
+pip install -r pipeline/requirements.txt
+python pipeline/01_search_nisar.py     # which NISAR passes are published (no login)
+python pipeline/02_fetch_subset.py     # read the AOI window of each granule
+python pipeline/04_ancillary.py        # terrain, land cover, OSM, population, Sentinel-1, HLS, rain
+python pipeline/03_flood_detect.py     # flood classes, thresholds logged
+python pipeline/05_exposure.py         # hexagon ranking
+python pipeline/06_export_web.py       # write web/data/<case>/
+python pipeline/check_contract.py      # validate the output
+```
+
+One config file per case: `pipeline/config.yaml` (Kuala Selangor) and
+`pipeline/config.mozambique.yaml` (add `--config pipeline/config.mozambique.yaml` to each step).
+A new area is a new config file. `web/` is a static site: plain ES modules, Three.js and MapLibre
+from a CDN, no build step. The data contract is in `CLAUDE.md` section 3; a demo guide and video
+scripts are in [`docs/DEMO.md`](docs/DEMO.md).
+
+## Built with AI assistance (Claude)
+
+This project was built with AI assistance: Claude (Anthropic), through Claude Code, wrote and
+tested the code and documentation under the team's direction. The team chose the cases, reviewed
+the results and is responsible for the claims made here.
 
 ## Licence
 

@@ -28,6 +28,8 @@ const DIAGRAMS = {
 function howHtml(man) {
   const L = man.method?.lband?.open_water_hh_db != null ? man.method.lband : null;
   const pending = man.pending_passes || [];
+  const val = man.validation?.rows?.length ? man.validation : null;
+  const lo = (rows, k) => { const v = rows.map(r => r[k]), a = Math.min(...v), b = Math.max(...v); return a === b ? `${a.toFixed(0)} %` : `${a.toFixed(0)} to ${b.toFixed(0)} %`; };
   const num = v => (+v).toFixed(1).replace('-', '−');
   return `
   <p>One flood, three satellites, three very different pictures. FloodLens lets you swing between them over the same ground and the same dates.</p>
@@ -51,6 +53,8 @@ function howHtml(man) {
     <li><b>Colours in the view.</b> In C-band mode, blue is what C-band itself flagged. In L-band mode, <b style="color:#2b70ff">blue</b> is flood flagged by both radars and <b style="color:#b8ff3d">lime</b> is flood flagged by L-band only: the part C-band misses.</li>
     <li>The crosshair read-out and the small chart show the backscatter of the pixel you are looking at, pass by pass.</li>
   </ul>
+  ${val ? `<h3>Checked against an independent map</h3>
+  <p>${esc(val.reference)} mapped the same flood from other satellite images. Where its area overlaps ours, our NISAR map of ${esc(val.date)} flags <b>${lo(val.rows, 'pct_of_ems_we_flag')} of the Copernicus flood area</b>, and ${lo(val.rows, 'pct_of_ours_outside_ems')} of what we flag lies outside their flood polygons. Their images are from the day before and the day after ours, and theirs is also a satellite map, not ground truth. <a href="${esc(val.url)}" target="_blank" rel="noopener">Copernicus EMS activation page</a>.</p>` : ''}
   ${pending.length ? `<h3>What this build can and cannot show yet</h3>
   <p class="warn">${pending.map(p => esc(p.note)).join(' ')} Until that pass is released, the L-band passes here are all from before the flood, and the flood date shows only what Sentinel-1 C-band could find. The explanation above is established radar physics; on this event it is still to be confirmed.</p>` : ''}
   <h3>Honest limits</h3>
