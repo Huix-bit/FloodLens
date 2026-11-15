@@ -27,3 +27,10 @@ export function pickQuality() {
     ? { tier: 'mobile', seg: 256, treeRadius: 115, maxPalms: 1500, maxTrees: 900, rain: 0, dpr: 1.5, aniso: 2 }
     : { tier: 'desktop', seg: 512, treeRadius: 195, maxPalms: 4000, maxTrees: 2500, rain: 2200, dpr: 2, aniso: 8 };
 }
+
+// Shown on the title card that opens the guided tour (key G).
+export const TEAM = {
+  name: 'Deriter',
+  challenge: 'NASA Space Apps Challenge 2026 · Dancing with the SARs',
+  tagline: 'FloodLens — see the flood behind the cloud',
+};

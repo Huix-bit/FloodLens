@@ -74,7 +74,7 @@ and `pipeline/07_validate_ems.py`.
 | `1`–`9`, mouse wheel, timeline, `L` | Change satellite pass, play the timeline |
 | `K` | Exposure ranking and pass details: ranked hexagons, CSV / GeoJSON download, copyable summary, key |
 | `M` | 2D map of the same data; click for details, "Fly here in 3D" |
-| `G` | Guided tour (29 seconds, captions from the data) |
+| `G` | Guided tour (just under 30 seconds: title card, then captions from the data) |
 | `I`, `O` | How it works, data sources |
 | `H` | Controls panel (hidden by default) |
 | `V`, or hold `Shift` | Probe under the crosshair: coordinates, land cover, backscatter, pass-by-pass chart |

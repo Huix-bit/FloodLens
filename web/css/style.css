@@ -362,3 +362,10 @@ body.map2d #tape,body.map2d #xhair,body.map2d #probe,body.tour #probe,body.tour 
 #map2d .maplibregl-popup-content{background:var(--bg);color:var(--ink);border:1px solid var(--rule);border-radius:0;padding:10px 12px;font:400 12px var(--sans);box-shadow:none}
 #map2d .maplibregl-popup-content b{display:block;margin-bottom:6px}
 #map2d .maplibregl-popup-tip{display:none}
+
+/* title card that opens the guided tour */
+#caption.title{bottom:auto;top:50%;transform:translate(-50%,-50%);max-width:min(1000px,94vw);padding:26px 40px 28px;background:rgba(0,0,0,.82);text-align:center}
+#caption.title b{display:block;font:700 44px/1.1 var(--sans);color:#fff}
+#caption.title span{display:block;margin-top:12px;font:400 20px/1.3 var(--sans);color:#fff;white-space:nowrap}
+#caption.title span:last-child{color:var(--l);font-weight:700}
+@media (max-width:760px){ #caption.title{padding:16px 14px} #caption.title b{font-size:28px} #caption.title span{font-size:13px;white-space:normal} }

@@ -61,29 +61,30 @@ If something goes wrong: press **0** to return to the start view, or reload the 
 
 ## Script: 30-second video
 
-Replace `[TEAM NAME]` with your team name. 66 words with a four-word team name; the limit we set
-is 75. Both videos must name the team and the challenge in the first 5 seconds.
+65 words; the limit we set is 75. Both videos must name the team and the challenge in the first
+5 seconds.
 
 | Time | On screen | Narration |
 |---|---|---|
-| 0:00 | Title card: team name | "We are [TEAM NAME]." |
+| 0:00 | Title card: team name | "We are Deriter." |
 | 0:02 | Title card: NASA Space Apps Challenge 2026 · Dancing with the SARs | "NASA Space Apps Challenge 2026, Dancing with the SARs." |
 | 0:05 | Start of the flight, FloodLens wordmark | "This is FloodLens: see the flood the way NISAR does." |
 | 0:10 | Optical (cloud), swing to C-band, swing to L-band with the "+55.8 km²" caption | "It combines NASA's NISAR radar with Sentinel-1 and optical data. Mozambique, January 2026: optical saw cloud, Sentinel-1 found 93 square kilometres of flood, NISAR found 129." |
 | 0:20 | Exposure ranking (K), then back to the L-band view | "FloodLens ranks who is in the water, so help can reach them sooner, in any flood, anywhere." |
 | 0:30 | End card: site address | (silence) |
 
-How to get the footage: start the flight and press **G**. The guided tour runs 29 seconds, opens on
-the optical cloud view, swings to C-band at 7 s and to L-band at 12 s, and writes its own captions
-from the data. Use the first 5 seconds of your video for the two title cards, then cut in the tour
-from its start and trim the end. Record the K sheet separately for the 0:20 beat if you want it.
+How to get the footage: start the flight and press **G**. The guided tour runs just under 30
+seconds. It opens with a 3-second title card (Team Deriter, the challenge name, the FloodLens
+line) over the optical cloud view, shows the date and cloud cover, swings to C-band at 9 s and to
+L-band at 14 s, and writes its own captions from the data. You can use it as the whole video with
+the narration above, or record the K sheet separately for the 0:20 beat.
 
 ## Script: 3 to 5 minute video
 
 Total 4:55. Times are targets; read at a calm pace and trim words rather than rushing.
 
 **0:00 Opening (10 s).** Screen: title card.
-> We are [TEAM NAME]. This is our entry for the NASA Space Apps Challenge 2026, challenge
+> We are Deriter. This is our entry for the NASA Space Apps Challenge 2026, challenge
 > Dancing with the SARs. Our project is FloodLens.
 
 **0:10 Problem (25 s).** Screen: Selangor case, optical view, cloud and rain.
